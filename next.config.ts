@@ -32,6 +32,8 @@ const nextConfig: NextConfig = {
       path.join(process.cwd(), "remotion/**/*"),
       // Remotion bundles import fonts dynamically, so manually trace the package.
       path.join(process.cwd(), "node_modules/@remotion/google-fonts/**/*"),
+      // Remotion bundler copies its own favicon and assets at runtime.
+      path.join(process.cwd(), "node_modules/@remotion/bundler/**/*"),
     ],
   },
   // Empty turbopack config to acknowledge we're using Turbopack
