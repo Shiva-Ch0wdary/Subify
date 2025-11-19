@@ -1,0 +1,294 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Player } from "@remotion/player";
+import {
+  CAPTION_PLACEMENT_OPTIONS,
+  CAPTION_STYLE_PRESETS,
+  DEFAULT_FPS,
+  DEFAULT_VIDEO_DIMENSIONS,
+} from "@/lib/constants/captions";
+import type {
+  CaptionPlacement,
+  CaptionSession,
+  CaptionStylePreset,
+} from "@/lib/types/captions";
+import { CaptionComposition } from "@/remotion/caption-composition";
+
+type StudioShellProps = {
+  initialSession: CaptionSession;
+};
+
+type ExportState = "idle" | "rendering" | "error" | "completed";
+
+export const StudioShell = ({ initialSession }: StudioShellProps) => {
+  const [session, setSession] = useState<CaptionSession>(initialSession);
+  const [saveState, setSaveState] = useState<{
+    isSaving: boolean;
+    message: string | null;
+  }>({ isSaving: false, message: null });
+  const [exportState, setExportState] = useState<ExportState>("idle");
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [renderProgress, setRenderProgress] = useState(0);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const resetProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const durationInFrames = useMemo(
+    () => Math.ceil(session.duration * DEFAULT_FPS) || DEFAULT_FPS * 10,
+    [session.duration]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      if (resetProgressTimeoutRef.current) {
+        clearTimeout(resetProgressTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const beginProgressEmulation = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    setRenderProgress(0);
+    progressIntervalRef.current = setInterval(() => {
+      setRenderProgress((previous) => {
+        if (previous >= 95) return previous;
+        const increment = Math.random() * 7 + 2;
+        return Math.min(previous + increment, 95);
+      });
+    }, 350);
+  };
+
+  const stopProgressEmulation = (isSuccessful: boolean) => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    setRenderProgress(isSuccessful ? 100 : 0);
+    if (resetProgressTimeoutRef.current) {
+      clearTimeout(resetProgressTimeoutRef.current);
+    }
+    if (isSuccessful) {
+      resetProgressTimeoutRef.current = setTimeout(
+        () => setRenderProgress(0),
+        1200
+      );
+    } else {
+      resetProgressTimeoutRef.current = null;
+    }
+  };
+
+  const updateSessionField = async (
+    payload: Partial<Pick<CaptionSession, "stylePreset" | "placement">>
+  ) => {
+    setSaveState({ isSaving: true, message: "Saving changes..." });
+    setSession((current) => ({ ...current, ...payload }));
+
+    try {
+      const response = await fetch(`/api/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const next = (await response.json()) as CaptionSession;
+      setSession(next);
+      setSaveState({ isSaving: false, message: "Saved" });
+    } catch (error) {
+      console.error(error);
+      setSaveState({
+        isSaving: false,
+        message:
+          error instanceof Error ? error.message : "Failed to save changes.",
+      });
+    }
+  };
+
+  const handleStyleChange = (style: CaptionStylePreset) => {
+    if (style === session.stylePreset) return;
+    void updateSessionField({ stylePreset: style });
+  };
+
+  const handlePlacementChange = (placement: CaptionPlacement) => {
+    if (placement === session.placement) return;
+    void updateSessionField({ placement });
+  };
+
+  const handleExport = async () => {
+    setExportState("rendering");
+    setExportError(null);
+    beginProgressEmulation();
+    try {
+      const response = await fetch(`/api/sessions/${session.id}/export`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error((await response.text()) || "Export failed.");
+      }
+      const payload = (await response.json()) as { downloadUrl: string };
+      setSession((current) => ({
+        ...current,
+        exportDownloadUrl: payload.downloadUrl,
+      }));
+      setExportState("completed");
+      stopProgressEmulation(true);
+    } catch (error) {
+      console.error(error);
+      stopProgressEmulation(false);
+      setExportState("error");
+      setExportError(error instanceof Error ? error.message : "Export failed.");
+    }
+  };
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
+      <section className="space-y-6 rounded-2xl bg-white/5 p-6 backdrop-blur">
+        <div className="space-y-3">
+          <p className="text-lg font-semibold text-white/80">
+          Caption Style
+          </p>
+          <div className="grid gap-3">
+            {CAPTION_STYLE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleStyleChange(preset.id)}
+                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                  session.stylePreset === preset.id
+                    ? "border-purple-400 bg-purple-500/10 text-white"
+                    : "border-white/10 bg-white/5 text-white/70 hover:border-white/30"
+                }`}
+              >
+                <p className="text-sm font-semibold">{preset.label}</p>
+                <p className="text-xs text-white/60">{preset.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-lg font-semibold text-white/80">
+            Caption Position
+          </p>
+          <div className="grid gap-3">
+            {CAPTION_PLACEMENT_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handlePlacementChange(option.id)}
+                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                  session.placement === option.id
+                    ? "border-indigo-400 bg-indigo-500/10 text-white"
+                    : "border-white/10 bg-white/5 text-white/70 hover:border-white/30"
+                }`}
+              >
+                <p className="text-sm font-semibold">{option.label}</p>
+                <p className="text-xs text-white/60">{option.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl bg-black/30 p-4 shadow-2xl shadow-purple-950/30 lg:p-6">
+        <div className="flex flex-col gap-2 rounded-2xl border border-white/5 bg-black/40 p-4">
+          <p className="text-lg font-semibold text-purple-200">Preview</p>
+          <p className="text-sm text-white/70">
+            See how your edited video will look before exporting 🔃
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-black/40 p-3">
+          <Player
+            component={CaptionComposition}
+            durationInFrames={durationInFrames}
+            fps={DEFAULT_FPS}
+            compositionWidth={DEFAULT_VIDEO_DIMENSIONS.width}
+            compositionHeight={DEFAULT_VIDEO_DIMENSIONS.height}
+            controls
+            style={{
+              width: "100%",
+              borderRadius: "1rem",
+              overflow: "hidden",
+              background: "#000",
+            }}
+            inputProps={{
+              captions: session.captions,
+              fps: DEFAULT_FPS,
+              videoSrc: session.videoSrc,
+              stylePreset: session.stylePreset,
+              placement: session.placement,
+              duration: session.duration,
+              width: DEFAULT_VIDEO_DIMENSIONS.width,
+              height: DEFAULT_VIDEO_DIMENSIONS.height,
+            }}
+          />
+        </div>
+
+        <div className="space-y-3">
+          {exportState === "completed" && session.exportDownloadUrl ? (
+            <a
+              href={session.exportDownloadUrl}
+              download
+              className="flex h-14 w-full items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-base font-semibold text-slate-900 shadow-[0_12px_45px_rgba(16,185,129,0.35)] transition hover:scale-[1.01]"
+            >
+              Download Your Video
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-5 h-5"
+              >
+                <path d="M12 3v11" />
+                <path d="M7 9l5 5 5-5" />
+                <path d="M5 17h14v3H5z" />
+              </svg>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exportState === "rendering"}
+              className="relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 text-base font-semibold text-white shadow-[0_10px_40px_rgba(99,102,241,0.25)] transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span
+                className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500"
+                style={{
+                  width:
+                    exportState === "rendering"
+                      ? `${Math.max(renderProgress, 12)}%`
+                      : "100%",
+                  transition:
+                    exportState === "rendering" ? "width 0.3s ease" : "none",
+                }}
+              />
+              <span className="relative z-10 mix-blend-lighten">
+                {exportState === "rendering"
+                  ? `Exporting ${Math.round(renderProgress)}%…`
+                  : "Export Video"}    
+              </span>
+            </button>
+          )}
+          {exportState === "error" && exportError && (
+            <p className="text-xs text-red-300">{exportError}</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};

@@ -1,0 +1,940 @@
+{
+  "id": "a180d850-07e8-42b2-9c20-8237d7ece83f",
+  "videoSrc": "/uploads/a180d850-07e8-42b2-9c20-8237d7ece83f-Enter_Now__Doodle_for_Google_2025.mp4",
+  "captions": [
+    {
+      "id": 0,
+      "start": 0,
+      "end": 0.785,
+      "text": "Hi everyone, this is Giannis Antetokounmpo, professional basketball player. I'm here",
+      "words": [
+        {
+          "id": 0,
+          "text": "Hi",
+          "start": 0,
+          "end": 0.071
+        },
+        {
+          "id": 1,
+          "text": "everyone,",
+          "start": 0.071,
+          "end": 0.142
+        },
+        {
+          "id": 2,
+          "text": "this",
+          "start": 0.143,
+          "end": 0.214
+        },
+        {
+          "id": 3,
+          "text": "is",
+          "start": 0.214,
+          "end": 0.285
+        },
+        {
+          "id": 4,
+          "text": "Giannis",
+          "start": 0.286,
+          "end": 0.357
+        },
+        {
+          "id": 5,
+          "text": "Antetokounmpo,",
+          "start": 0.357,
+          "end": 0.428
+        },
+        {
+          "id": 6,
+          "text": "professional",
+          "start": 0.429,
+          "end": 0.5
+        },
+        {
+          "id": 7,
+          "text": "basketball",
+          "start": 0.5,
+          "end": 0.571
+        },
+        {
+          "id": 8,
+          "text": "player.",
+          "start": 0.571,
+          "end": 0.642
+        },
+        {
+          "id": 9,
+          "text": "I'm",
+          "start": 0.643,
+          "end": 0.714
+        },
+        {
+          "id": 10,
+          "text": "here",
+          "start": 0.714,
+          "end": 0.785
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 0.786,
+      "end": 1.785,
+      "text": "to make a huge announcement. Doodles for Google is back for 2025 and I'll",
+      "words": [
+        {
+          "id": 11,
+          "text": "to",
+          "start": 0.786,
+          "end": 0.857
+        },
+        {
+          "id": 12,
+          "text": "make",
+          "start": 0.857,
+          "end": 0.928
+        },
+        {
+          "id": 13,
+          "text": "a",
+          "start": 0.929,
+          "end": 1
+        },
+        {
+          "id": 14,
+          "text": "huge",
+          "start": 1,
+          "end": 1.071
+        },
+        {
+          "id": 15,
+          "text": "announcement.",
+          "start": 1.071,
+          "end": 1.142
+        },
+        {
+          "id": 16,
+          "text": "Doodles",
+          "start": 1.143,
+          "end": 1.214
+        },
+        {
+          "id": 17,
+          "text": "for",
+          "start": 1.214,
+          "end": 1.285
+        },
+        {
+          "id": 18,
+          "text": "Google",
+          "start": 1.286,
+          "end": 1.357
+        },
+        {
+          "id": 19,
+          "text": "is",
+          "start": 1.357,
+          "end": 1.428
+        },
+        {
+          "id": 20,
+          "text": "back",
+          "start": 1.429,
+          "end": 1.5
+        },
+        {
+          "id": 21,
+          "text": "for",
+          "start": 1.5,
+          "end": 1.571
+        },
+        {
+          "id": 22,
+          "text": "2025",
+          "start": 1.571,
+          "end": 1.642
+        },
+        {
+          "id": 23,
+          "text": "and",
+          "start": 1.643,
+          "end": 1.714
+        },
+        {
+          "id": 24,
+          "text": "I'll",
+          "start": 1.714,
+          "end": 1.785
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 1.786,
+      "end": 2.785,
+      "text": "be a judge. Doodles for Google is an art contest for students in the",
+      "words": [
+        {
+          "id": 25,
+          "text": "be",
+          "start": 1.786,
+          "end": 1.857
+        },
+        {
+          "id": 26,
+          "text": "a",
+          "start": 1.857,
+          "end": 1.928
+        },
+        {
+          "id": 27,
+          "text": "judge.",
+          "start": 1.929,
+          "end": 2
+        },
+        {
+          "id": 28,
+          "text": "Doodles",
+          "start": 2,
+          "end": 2.071
+        },
+        {
+          "id": 29,
+          "text": "for",
+          "start": 2.071,
+          "end": 2.142
+        },
+        {
+          "id": 30,
+          "text": "Google",
+          "start": 2.143,
+          "end": 2.214
+        },
+        {
+          "id": 31,
+          "text": "is",
+          "start": 2.214,
+          "end": 2.285
+        },
+        {
+          "id": 32,
+          "text": "an",
+          "start": 2.286,
+          "end": 2.357
+        },
+        {
+          "id": 33,
+          "text": "art",
+          "start": 2.357,
+          "end": 2.428
+        },
+        {
+          "id": 34,
+          "text": "contest",
+          "start": 2.429,
+          "end": 2.5
+        },
+        {
+          "id": 35,
+          "text": "for",
+          "start": 2.5,
+          "end": 2.571
+        },
+        {
+          "id": 36,
+          "text": "students",
+          "start": 2.571,
+          "end": 2.642
+        },
+        {
+          "id": 37,
+          "text": "in",
+          "start": 2.643,
+          "end": 2.714
+        },
+        {
+          "id": 38,
+          "text": "the",
+          "start": 2.714,
+          "end": 2.785
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 2.786,
+      "end": 3.785,
+      "text": "US that they can reimagine the Google logo. And this year's theme is My",
+      "words": [
+        {
+          "id": 39,
+          "text": "US",
+          "start": 2.786,
+          "end": 2.857
+        },
+        {
+          "id": 40,
+          "text": "that",
+          "start": 2.857,
+          "end": 2.928
+        },
+        {
+          "id": 41,
+          "text": "they",
+          "start": 2.929,
+          "end": 3
+        },
+        {
+          "id": 42,
+          "text": "can",
+          "start": 3,
+          "end": 3.071
+        },
+        {
+          "id": 43,
+          "text": "reimagine",
+          "start": 3.071,
+          "end": 3.142
+        },
+        {
+          "id": 44,
+          "text": "the",
+          "start": 3.143,
+          "end": 3.214
+        },
+        {
+          "id": 45,
+          "text": "Google",
+          "start": 3.214,
+          "end": 3.285
+        },
+        {
+          "id": 46,
+          "text": "logo.",
+          "start": 3.286,
+          "end": 3.357
+        },
+        {
+          "id": 47,
+          "text": "And",
+          "start": 3.357,
+          "end": 3.428
+        },
+        {
+          "id": 48,
+          "text": "this",
+          "start": 3.429,
+          "end": 3.5
+        },
+        {
+          "id": 49,
+          "text": "year's",
+          "start": 3.5,
+          "end": 3.571
+        },
+        {
+          "id": 50,
+          "text": "theme",
+          "start": 3.571,
+          "end": 3.642
+        },
+        {
+          "id": 51,
+          "text": "is",
+          "start": 3.643,
+          "end": 3.714
+        },
+        {
+          "id": 52,
+          "text": "My",
+          "start": 3.714,
+          "end": 3.785
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 3.786,
+      "end": 4.714,
+      "text": "Superpower Is. The winners of the contest will win scholarship and technology for",
+      "words": [
+        {
+          "id": 53,
+          "text": "Superpower",
+          "start": 3.786,
+          "end": 3.857
+        },
+        {
+          "id": 54,
+          "text": "Is.",
+          "start": 3.857,
+          "end": 3.928
+        },
+        {
+          "id": 55,
+          "text": "The",
+          "start": 3.929,
+          "end": 4
+        },
+        {
+          "id": 56,
+          "text": "winners",
+          "start": 4,
+          "end": 4.071
+        },
+        {
+          "id": 57,
+          "text": "of",
+          "start": 4.071,
+          "end": 4.142
+        },
+        {
+          "id": 58,
+          "text": "the",
+          "start": 4.143,
+          "end": 4.214
+        },
+        {
+          "id": 59,
+          "text": "contest",
+          "start": 4.214,
+          "end": 4.285
+        },
+        {
+          "id": 60,
+          "text": "will",
+          "start": 4.286,
+          "end": 4.357
+        },
+        {
+          "id": 61,
+          "text": "win",
+          "start": 4.357,
+          "end": 4.428
+        },
+        {
+          "id": 62,
+          "text": "scholarship",
+          "start": 4.429,
+          "end": 4.5
+        },
+        {
+          "id": 63,
+          "text": "and",
+          "start": 4.5,
+          "end": 4.571
+        },
+        {
+          "id": 64,
+          "text": "technology",
+          "start": 4.571,
+          "end": 4.642
+        },
+        {
+          "id": 65,
+          "text": "for",
+          "start": 4.643,
+          "end": 4.714
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 4.714,
+      "end": 5.714,
+      "text": "their schools and their drawings will be on Google. I think it's very important",
+      "words": [
+        {
+          "id": 66,
+          "text": "their",
+          "start": 4.714,
+          "end": 4.785
+        },
+        {
+          "id": 67,
+          "text": "schools",
+          "start": 4.786,
+          "end": 4.857
+        },
+        {
+          "id": 68,
+          "text": "and",
+          "start": 4.857,
+          "end": 4.928
+        },
+        {
+          "id": 69,
+          "text": "their",
+          "start": 4.929,
+          "end": 5
+        },
+        {
+          "id": 70,
+          "text": "drawings",
+          "start": 5,
+          "end": 5.071
+        },
+        {
+          "id": 71,
+          "text": "will",
+          "start": 5.071,
+          "end": 5.142
+        },
+        {
+          "id": 72,
+          "text": "be",
+          "start": 5.143,
+          "end": 5.214
+        },
+        {
+          "id": 73,
+          "text": "on",
+          "start": 5.214,
+          "end": 5.285
+        },
+        {
+          "id": 74,
+          "text": "Google.",
+          "start": 5.286,
+          "end": 5.357
+        },
+        {
+          "id": 75,
+          "text": "I",
+          "start": 5.357,
+          "end": 5.428
+        },
+        {
+          "id": 76,
+          "text": "think",
+          "start": 5.429,
+          "end": 5.5
+        },
+        {
+          "id": 77,
+          "text": "it's",
+          "start": 5.5,
+          "end": 5.571
+        },
+        {
+          "id": 78,
+          "text": "very",
+          "start": 5.571,
+          "end": 5.642
+        },
+        {
+          "id": 79,
+          "text": "important",
+          "start": 5.643,
+          "end": 5.714
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 5.714,
+      "end": 6.714,
+      "text": "for kids to express themselves and most important feel powerful. I'm not done, I'm",
+      "words": [
+        {
+          "id": 80,
+          "text": "for",
+          "start": 5.714,
+          "end": 5.785
+        },
+        {
+          "id": 81,
+          "text": "kids",
+          "start": 5.786,
+          "end": 5.857
+        },
+        {
+          "id": 82,
+          "text": "to",
+          "start": 5.857,
+          "end": 5.928
+        },
+        {
+          "id": 83,
+          "text": "express",
+          "start": 5.929,
+          "end": 6
+        },
+        {
+          "id": 84,
+          "text": "themselves",
+          "start": 6,
+          "end": 6.071
+        },
+        {
+          "id": 85,
+          "text": "and",
+          "start": 6.071,
+          "end": 6.142
+        },
+        {
+          "id": 86,
+          "text": "most",
+          "start": 6.143,
+          "end": 6.214
+        },
+        {
+          "id": 87,
+          "text": "important",
+          "start": 6.214,
+          "end": 6.285
+        },
+        {
+          "id": 88,
+          "text": "feel",
+          "start": 6.286,
+          "end": 6.357
+        },
+        {
+          "id": 89,
+          "text": "powerful.",
+          "start": 6.357,
+          "end": 6.428
+        },
+        {
+          "id": 90,
+          "text": "I'm",
+          "start": 6.429,
+          "end": 6.5
+        },
+        {
+          "id": 91,
+          "text": "not",
+          "start": 6.5,
+          "end": 6.571
+        },
+        {
+          "id": 92,
+          "text": "done,",
+          "start": 6.571,
+          "end": 6.642
+        },
+        {
+          "id": 93,
+          "text": "I'm",
+          "start": 6.643,
+          "end": 6.714
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 6.714,
+      "end": 7.714,
+      "text": "not done. Okay, let's go with orange. This is my house right here and",
+      "words": [
+        {
+          "id": 94,
+          "text": "not",
+          "start": 6.714,
+          "end": 6.785
+        },
+        {
+          "id": 95,
+          "text": "done.",
+          "start": 6.786,
+          "end": 6.857
+        },
+        {
+          "id": 96,
+          "text": "Okay,",
+          "start": 6.857,
+          "end": 6.928
+        },
+        {
+          "id": 97,
+          "text": "let's",
+          "start": 6.929,
+          "end": 7
+        },
+        {
+          "id": 98,
+          "text": "go",
+          "start": 7,
+          "end": 7.071
+        },
+        {
+          "id": 99,
+          "text": "with",
+          "start": 7.071,
+          "end": 7.142
+        },
+        {
+          "id": 100,
+          "text": "orange.",
+          "start": 7.143,
+          "end": 7.214
+        },
+        {
+          "id": 101,
+          "text": "This",
+          "start": 7.214,
+          "end": 7.285
+        },
+        {
+          "id": 102,
+          "text": "is",
+          "start": 7.286,
+          "end": 7.357
+        },
+        {
+          "id": 103,
+          "text": "my",
+          "start": 7.357,
+          "end": 7.428
+        },
+        {
+          "id": 104,
+          "text": "house",
+          "start": 7.429,
+          "end": 7.5
+        },
+        {
+          "id": 105,
+          "text": "right",
+          "start": 7.5,
+          "end": 7.571
+        },
+        {
+          "id": 106,
+          "text": "here",
+          "start": 7.571,
+          "end": 7.642
+        },
+        {
+          "id": 107,
+          "text": "and",
+          "start": 7.643,
+          "end": 7.714
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 7.714,
+      "end": 8.571,
+      "text": "this is Google. With love from Giannis Antetokounmpo. Submissions for Doodles for",
+      "words": [
+        {
+          "id": 108,
+          "text": "this",
+          "start": 7.714,
+          "end": 7.785
+        },
+        {
+          "id": 109,
+          "text": "is",
+          "start": 7.786,
+          "end": 7.857
+        },
+        {
+          "id": 110,
+          "text": "Google.",
+          "start": 7.857,
+          "end": 7.928
+        },
+        {
+          "id": 111,
+          "text": "With",
+          "start": 7.929,
+          "end": 8
+        },
+        {
+          "id": 112,
+          "text": "love",
+          "start": 8,
+          "end": 8.071
+        },
+        {
+          "id": 113,
+          "text": "from",
+          "start": 8.071,
+          "end": 8.142
+        },
+        {
+          "id": 114,
+          "text": "Giannis",
+          "start": 8.143,
+          "end": 8.214
+        },
+        {
+          "id": 115,
+          "text": "Antetokounmpo.",
+          "start": 8.214,
+          "end": 8.285
+        },
+        {
+          "id": 116,
+          "text": "Submissions",
+          "start": 8.286,
+          "end": 8.357
+        },
+        {
+          "id": 117,
+          "text": "for",
+          "start": 8.357,
+          "end": 8.428
+        },
+        {
+          "id": 118,
+          "text": "Doodles",
+          "start": 8.429,
+          "end": 8.5
+        },
+        {
+          "id": 119,
+          "text": "for",
+          "start": 8.5,
+          "end": 8.571
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 8.571,
+      "end": 9.571,
+      "text": "Google are now open. I cannot wait to see how students express their superpower",
+      "words": [
+        {
+          "id": 120,
+          "text": "Google",
+          "start": 8.571,
+          "end": 8.642
+        },
+        {
+          "id": 121,
+          "text": "are",
+          "start": 8.643,
+          "end": 8.714
+        },
+        {
+          "id": 122,
+          "text": "now",
+          "start": 8.714,
+          "end": 8.785
+        },
+        {
+          "id": 123,
+          "text": "open.",
+          "start": 8.786,
+          "end": 8.857
+        },
+        {
+          "id": 124,
+          "text": "I",
+          "start": 8.857,
+          "end": 8.928
+        },
+        {
+          "id": 125,
+          "text": "cannot",
+          "start": 8.929,
+          "end": 9
+        },
+        {
+          "id": 126,
+          "text": "wait",
+          "start": 9,
+          "end": 9.071
+        },
+        {
+          "id": 127,
+          "text": "to",
+          "start": 9.071,
+          "end": 9.142
+        },
+        {
+          "id": 128,
+          "text": "see",
+          "start": 9.143,
+          "end": 9.214
+        },
+        {
+          "id": 129,
+          "text": "how",
+          "start": 9.214,
+          "end": 9.285
+        },
+        {
+          "id": 130,
+          "text": "students",
+          "start": 9.286,
+          "end": 9.357
+        },
+        {
+          "id": 131,
+          "text": "express",
+          "start": 9.357,
+          "end": 9.428
+        },
+        {
+          "id": 132,
+          "text": "their",
+          "start": 9.429,
+          "end": 9.5
+        },
+        {
+          "id": 133,
+          "text": "superpower",
+          "start": 9.5,
+          "end": 9.571
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 9.571,
+      "end": 10,
+      "text": "and show it to the world.",
+      "words": [
+        {
+          "id": 134,
+          "text": "and",
+          "start": 9.571,
+          "end": 9.642
+        },
+        {
+          "id": 135,
+          "text": "show",
+          "start": 9.643,
+          "end": 9.714
+        },
+        {
+          "id": 136,
+          "text": "it",
+          "start": 9.714,
+          "end": 9.785
+        },
+        {
+          "id": 137,
+          "text": "to",
+          "start": 9.786,
+          "end": 9.857
+        },
+        {
+          "id": 138,
+          "text": "the",
+          "start": 9.857,
+          "end": 9.928
+        },
+        {
+          "id": 139,
+          "text": "world.",
+          "start": 9.929,
+          "end": 10
+        }
+      ]
+    }
+  ],
+  "stylePreset": "standard",
+  "placement": "bottom",
+  "duration": 51.03746,
+  "language": "hi-en",
+  "createdAt": "2025-11-19T10:35:34.631Z",
+  "updatedAt": "2025-11-19T10:35:34.631Z"
+}
