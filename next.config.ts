@@ -13,6 +13,7 @@ const REMOTION_NATIVE_PACKAGES = [
   "@remotion/web-renderer",
   "@remotion/media-parser",
   "@remotion/media-utils",
+  "@remotion/google-fonts",
   "@remotion/compositor-darwin-arm64",
   "@remotion/compositor-darwin-x64",
   "@remotion/compositor-linux-arm64-gnu",
