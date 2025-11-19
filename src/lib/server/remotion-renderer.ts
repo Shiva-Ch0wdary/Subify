@@ -111,6 +111,12 @@ const bundleRemotionProject = async () => {
           console.warn("[remotion] Font preload failed, continuing with fallback", error);
         }
 
+        // Ensure public directory exists to prevent bundler errors
+        const fs = await import("fs");
+        if (!fs.existsSync(PUBLIC_DIR)) {
+          fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+        }
+
         // The bundler typings still expect the legacy positional arguments signature.
         // Cast to `any` so we can use the modern options object without type noise.
         return (bundle as unknown as (options: Record<string, unknown>) => Promise<string>)({
@@ -119,9 +125,6 @@ const bundleRemotionProject = async () => {
           webpackOverride: applyWebpackAlias,
           enableCaching: false,
           cacheDir: REMOTION_CACHE_DIR,
-          // Disable all optional features to minimize dependencies
-          onProgress: () => void 0,
-          onDirectoryCreated: () => void 0,
         });
       })
       .catch((error) => {

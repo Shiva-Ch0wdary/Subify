@@ -29,11 +29,12 @@ const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
   outputFileTracingIncludes: {
     "/api/sessions/[sessionId]/export": [
-      "remotion/**/*",
+      path.join(process.cwd(), "remotion/**/*"),
+      path.join(process.cwd(), "public/**/*"),
       // Remotion bundles import fonts dynamically, so manually trace the package.
-      "node_modules/@remotion/google-fonts/**/*",
-      // Remotion bundler copies its own favicon and assets at runtime.
-      "node_modules/@remotion/bundler/**/*",
+      path.join(process.cwd(), "node_modules/@remotion/google-fonts/**/*"),
+      // Include bundler assets to prevent favicon copy errors
+      path.join(process.cwd(), "node_modules/@remotion/bundler/**/*"),
     ],
   },
   // Empty turbopack config to acknowledge we're using Turbopack
