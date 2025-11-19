@@ -11,6 +11,10 @@ const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const SRC_DIR = path.join(ROOT_DIR, "src");
 const REMOTION_CACHE_DIR = path.join(os.tmpdir(), "remotion-cache");
 
+// Disable Remotion Studio (not needed for server-side rendering)
+if (!process.env.REMOTION_STUDIO_ENABLED) {
+  process.env.REMOTION_STUDIO_ENABLED = "false";
+}
 if (!process.env.REMOTION_DISABLE_CACHE) {
   process.env.REMOTION_DISABLE_CACHE = "true";
 }
@@ -28,6 +32,7 @@ type MutableWebpackConfig = {
     [key: string]: unknown;
   };
   externals?: unknown[];
+  plugins?: unknown[];
   [key: string]: unknown;
 };
 
@@ -62,13 +67,35 @@ const applyWebpackAlias = (config: MutableWebpackConfig) => {
   config.resolve.alias = {
     ...(config.resolve.alias ?? {}),
     "@": SRC_DIR,
-    // Prevent @remotion/studio from being bundled (it's dev-only)
-    "@remotion/studio": false as unknown as string,
-    "@remotion/studio-shared": false as unknown as string,
   };
   config.resolve.extensions = Array.from(
     new Set([...(config.resolve.extensions ?? []), ".ts", ".tsx", ".js", ".jsx", ".mjs"]),
   );
+  
+  // Add plugin to ignore @remotion/studio (dev-only dependency not needed for rendering)
+  config.plugins = config.plugins || [];
+  
+  // Create an IgnorePlugin to exclude @remotion/studio modules
+  // This avoids issues in serverless environments where studio files don't exist
+  const ignorePlugin = {
+    apply(compiler: { hooks?: { normalModuleFactory?: { tap?: (name: string, handler: (nmf: unknown) => void) => void } } }) {
+      if (compiler?.hooks?.normalModuleFactory?.tap) {
+        compiler.hooks.normalModuleFactory.tap("IgnoreStudioPlugin", (nmf: unknown) => {
+          const nmfHooks = nmf as { hooks?: { beforeResolve?: { tap?: (name: string, handler: (resolveData: { request?: string }) => unknown) => void } } };
+          if (nmfHooks?.hooks?.beforeResolve?.tap) {
+            nmfHooks.hooks.beforeResolve.tap("IgnoreStudioPlugin", (resolveData: { request?: string }) => {
+              if (resolveData?.request?.includes("@remotion/studio")) {
+                return false;
+              }
+            });
+          }
+        });
+      }
+    },
+  };
+  
+  config.plugins.push(ignorePlugin);
+  
   return config;
 };
 
@@ -92,6 +119,9 @@ const bundleRemotionProject = async () => {
           webpackOverride: applyWebpackAlias,
           enableCaching: false,
           cacheDir: REMOTION_CACHE_DIR,
+          // Disable all optional features to minimize dependencies
+          onProgress: () => void 0,
+          onDirectoryCreated: () => void 0,
         });
       })
       .catch((error) => {

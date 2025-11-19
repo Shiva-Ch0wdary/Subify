@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
       path.join(process.cwd(), "node_modules/@remotion/google-fonts/**/*"),
     ],
   },
+  // Empty turbopack config to acknowledge we're using Turbopack
+  turbopack: {},
 };
 
 export default nextConfig;
