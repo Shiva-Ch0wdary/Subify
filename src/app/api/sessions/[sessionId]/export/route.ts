@@ -13,13 +13,6 @@ import { validateUploadFile } from "@/lib/server/transcription";
 import { createTempAssetServer } from "@/lib/server/temp-asset-server";
 
 export const runtime = "nodejs";
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "400mb",
-    },
-  },
-};
 
 type RouteContext = {
   params: Promise<{ sessionId: string }>;
