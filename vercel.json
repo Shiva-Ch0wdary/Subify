@@ -6,7 +6,7 @@
     }
   },
   "functions": {
-    "api/sessions/[sessionId]/export/route.ts": {
+    "src/app/api/sessions/[sessionId]/export/route.ts": {
       "memory": 1024,
       "maxDuration": 300
     }
