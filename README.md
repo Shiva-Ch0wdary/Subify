@@ -1,4 +1,4 @@
-# Subify – AI Captioning Studio
+# Subify - AI Captioning Studio
 
 Subify lets creators upload short-form video, generate Hinglish captions with OpenAI Whisper, style them in Remotion, and export both the rendered MP4 and clean subtitle files (SRT/VTT). Everything runs on a local-first storage model so raw videos never touch the deployment filesystem.
 
@@ -7,7 +7,7 @@ Subify lets creators upload short-form video, generate Hinglish captions with Op
 - **Next.js 16 + App Router** with server actions for uploads, session storage, and Remotion rendering.
 - **OpenAI Whisper (gpt-4o-mini-transcribe)** for super accurate Hinglish transcripts with segment + word timing.
 - **Remotion studio** exposes three caption presets, three placements, and a real-time preview powered by `@remotion/player`.
-- **Download hub** offers MP4, `.srt`, `.vtt`, or a zipped bundle—no re-rendering required.
+- **Download hub** offers MP4, `.srt`, `.vtt`, or a zipped bundle, no re-rendering required.
 - **Local-first privacy**: uploads stay inside the browser’s IndexedDB and are streamed to the server only during transcription/export.
 
 ## Architecture Snapshot
@@ -30,9 +30,9 @@ Subify lets creators upload short-form video, generate Hinglish captions with Op
 
 ```bash
 git clone <repo>
-cd remotion-captioning-platform
+cd Subify
 npm install
-cp .env.local.example .env.local   # provide OPENAI_API_KEY
+cp .env.local   # provide OPENAI_API_KEY
 npm run dev
 ```
 
@@ -40,10 +40,10 @@ Visit `http://localhost:3000` and drop an `.mp4` (≤300 MB) to get started.
 
 ## Workflow
 
-1. **Upload** – the landing page validates the file, stores it in IndexedDB, and POSTs to `/api/sessions` for Whisper transcription.
-2. **Studio** – `/studio/[sessionId]` loads captions, lets you switch styles/placements, and previews everything in Remotion.
-3. **Export** – clicking *Export MP4* streams the original video from the browser to `/api/sessions/[id]/export`. Remotion renders the composition on the server and returns the MP4 stream; the resulting blob is cached locally.
-4. **Download hub** – after export the app redirects to `/download/[sessionId]` where you can grab:
+1. **Upload** - the landing page validates the file, stores it in IndexedDB, and POSTs to `/api/sessions` for Whisper transcription.
+2. **Studio** - `/studio/[sessionId]` loads captions, lets you switch styles/placements, and previews everything in Remotion.
+3. **Export** - clicking *Export MP4* streams the original video from the browser to `/api/sessions/[id]/export`. Remotion renders the composition on the server and returns the MP4 stream; the resulting blob is cached locally.
+4. **Download hub** - after export the app redirects to `/download/[sessionId]` where you can grab:
    - MP4 with burned-in captions
    - `.srt` and `.vtt` sidecar files (generated client-side)
    - A `.zip` bundle containing MP4 + both subtitle formats
@@ -65,11 +65,25 @@ Sanitized `CaptionSegment`s feed two helpers (`captionsToSrt`, `captionsToVtt`) 
 
 ## Deployment notes
 
-- **Environment** – define `OPENAI_API_KEY` in your hosting provider. Keys are only read server-side.
-- **Storage** – the repo ships with empty `storage/sessions/.gitkeep` and `storage/renders/.gitkeep`. At runtime these directories persist caption metadata only; raw uploads never land here.
-- **Static assets** – sample media lives in `assets/` + `public/samples/` strictly for demos/testing.
-- **Cleaning** – no generated exports or session JSONs are committed, keeping the repo production-ready.
+- **Environment** - define `OPENAI_API_KEY` in your hosting provider. Keys are only read server-side.
+- **Storage** - the repo ships with empty `storage/sessions/.gitkeep` and `storage/renders/.gitkeep`. At runtime these directories persist caption metadata only; raw uploads never land here.
+- **Static assets** - sample media lives in `assets/` + `public/samples/` strictly for demos/testing.
+- **Cleaning** - no generated exports or session JSONs are committed, keeping the repo production-ready.
 
 Once deployed, the workflow remains identical: uploads stay local to the browser, Whisper runs inside your serverless region, and rendered MP4/subtitle downloads are delivered through the download hub.
+
+
+## Contribution
+
+We welcome contributions to enhance our Subify. Please submit pull requests with detailed descriptions of proposed changes.
+
+## Contact Us
+
+For any questions, feedback, or collaboration opportunities, feel free to reach out to us:
+
+- Mandapudi. Shiva Rama Krishna  
+- **Email**: shivachowdary753@gmail.com
+
+We’d love to hear your thoughts and suggestions on the project!
 
 Happy captioning! 🎬
