@@ -7,9 +7,15 @@ Upload `.mp4` files, auto-generate Hinglish captions with OpenAI Whisper, previe
 - **Upload → Generate → Studio → Export** workflow powered by Next.js App Router.
 - **`POST /api/sessions`** uploads the video, runs Whisper (gpt-4o-mini-transcribe), stores captions, and returns a shareable session id.
 - **Caption Studio (`/studio/[sessionId]`)** replays the video in Remotion Player, exposes style + placement controls, and persists the selection.
-- **`POST /api/sessions/[id]/export`** renders the Remotion composition on the server and returns an MP4 download URL inside `public/exports`.
+- **`POST /api/sessions/[id]/export`** renders the Remotion composition on the server and streams the MP4 back to the browser (no files are written to `/public`).
 - **Three presets + three placement anchors** (bottom, middle, top) guarantee readable Hinglish subtitles with bundled Noto fonts.
 - **Sample assets** plus CLI command `npm run render:sample` still ship for quick offline testing.
+
+## Local-first storage
+
+- Uploaded videos never touch the server filesystem anymore. They live inside your browser's IndexedDB and are only streamed to the API when transcription/export is running.
+- This keeps deployments (Vercel/Netlify) happy because no handler attempts to write into `public/`.
+- If you clear browser storage you will need to re-upload the source video before exporting again.
 
 ## Tech Stack
 
@@ -45,7 +51,7 @@ Open [http://localhost:3000](http://localhost:3000) to use the UI.
 ## Caption Generation Method
 
 1. Client uploads `.mp4`, validating size (< 300 MB) and type before hitting the server.
-2. `POST /api/sessions` (or `/api/generate-captions` for raw transcripts) parses multipart form data, persists the upload to `public/uploads`, and rehydrates a Node-friendly `File`.
+2. `POST /api/sessions` (or `/api/generate-captions` for raw transcripts) parses multipart form data, streams it directly to Whisper, and never touches the deployment filesystem.
 3. OpenAI SDK call:
 
    ```ts
@@ -101,8 +107,8 @@ Fonts (`Noto Sans`, `Noto Sans Devanagari`, `Space Grotesk`) are registered on b
 ### In-app MP4 export
 
 - Use the **Export MP4** button on `/studio/[sessionId]`.
-- The server bundles `remotion/Root.tsx`, renders `CaptionComposition` with your session props, and saves the video to `public/exports/<session>.mp4`.
-- The API responds with `downloadUrl`, which the UI exposes via a download button.
+- The browser re-uploads the original video from IndexedDB, the server bundles `remotion/Root.tsx`, renders the Remotion composition, and streams the MP4 back immediately (nothing is written to disk).
+- The resulting blob is cached locally so you can download it again without re-exporting.
 
 ### CLI render (sample props)
 

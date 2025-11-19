@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Player } from "@remotion/player";
 import {
@@ -14,6 +15,7 @@ import type {
   CaptionStylePreset,
 } from "@/lib/types/captions";
 import { CaptionComposition } from "@/remotion/caption-composition";
+import { useSessionMedia } from "@/hooks/use-session-video";
 
 type StudioShellProps = {
   initialSession: CaptionSession;
@@ -36,6 +38,16 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
   const resetProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  const {
+    videoFile,
+    videoUrl,
+    isVideoLoading,
+    videoError,
+    hasVideo,
+    exportUrl,
+    exportFileName,
+    setExportBlob,
+  } = useSessionMedia({ sessionId: session.id });
 
   const durationInFrames = useMemo(
     () => Math.ceil(session.duration * DEFAULT_FPS) || DEFAULT_FPS * 10,
@@ -52,6 +64,18 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setExportState((current) => {
+      if (exportUrl && current !== "rendering") {
+        return "completed";
+      }
+      if (!exportUrl && current === "completed") {
+        return "idle";
+      }
+      return current;
+    });
+  }, [exportUrl]);
 
   const beginProgressEmulation = () => {
     if (progressIntervalRef.current) {
@@ -127,21 +151,34 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
   };
 
   const handleExport = async () => {
+    if (!videoFile) {
+      setExportState("error");
+      setExportError(
+        "Original video missing in this browser. Re-upload it from the home page to export."
+      );
+      return;
+    }
     setExportState("rendering");
     setExportError(null);
     beginProgressEmulation();
     try {
+      const formData = new FormData();
+      formData.append("file", videoFile);
+
       const response = await fetch(`/api/sessions/${session.id}/export`, {
         method: "POST",
+        body: formData,
       });
       if (!response.ok) {
-        throw new Error((await response.text()) || "Export failed.");
+        const message =
+          (await response.text()) || "Export failed. Please try again.";
+        throw new Error(message);
       }
-      const payload = (await response.json()) as { downloadUrl: string };
-      setSession((current) => ({
-        ...current,
-        exportDownloadUrl: payload.downloadUrl,
-      }));
+      const blob = await response.blob();
+      const safeName =
+        session.videoMetadata?.name?.replace(/\.[^.]+$/, "") ??
+        `subify-${session.id.slice(0, 6)}`;
+      await setExportBlob(blob, `${safeName}-captions.mp4`);
       setExportState("completed");
       stopProgressEmulation(true);
     } catch (error) {
@@ -210,37 +247,63 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
           </p>
         </div>
         <div className="rounded-2xl border border-white/5 bg-black/40 p-3">
-          <Player
-            component={CaptionComposition}
-            durationInFrames={durationInFrames}
-            fps={DEFAULT_FPS}
-            compositionWidth={DEFAULT_VIDEO_DIMENSIONS.width}
-            compositionHeight={DEFAULT_VIDEO_DIMENSIONS.height}
-            controls
-            style={{
-              width: "100%",
-              borderRadius: "1rem",
-              overflow: "hidden",
-              background: "#000",
-            }}
-            inputProps={{
-              captions: session.captions,
-              fps: DEFAULT_FPS,
-              videoSrc: session.videoSrc,
-              stylePreset: session.stylePreset,
-              placement: session.placement,
-              duration: session.duration,
-              width: DEFAULT_VIDEO_DIMENSIONS.width,
-              height: DEFAULT_VIDEO_DIMENSIONS.height,
-            }}
-          />
+          {isVideoLoading ? (
+            <div className="flex h-[420px] items-center justify-center rounded-xl border border-white/5 text-sm text-white/70">
+              Loading your video from secure browser storage…
+            </div>
+          ) : videoError ? (
+            <div className="flex h-[420px] flex-col items-center justify-center gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-6 text-center text-sm text-red-200">
+              <p className="font-semibold">Video unavailable</p>
+              <p>{videoError}</p>
+              <Link
+                href="/"
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+              >
+                Go back & re-upload
+              </Link>
+            </div>
+          ) : videoUrl ? (
+            <Player
+              component={CaptionComposition}
+              durationInFrames={durationInFrames}
+              fps={DEFAULT_FPS}
+              compositionWidth={DEFAULT_VIDEO_DIMENSIONS.width}
+              compositionHeight={DEFAULT_VIDEO_DIMENSIONS.height}
+              controls
+              style={{
+                width: "100%",
+                borderRadius: "1rem",
+                overflow: "hidden",
+                background: "#000",
+              }}
+              inputProps={{
+                captions: session.captions,
+                fps: DEFAULT_FPS,
+                videoSrc: videoUrl,
+                stylePreset: session.stylePreset,
+                placement: session.placement,
+                duration: session.duration,
+                width: DEFAULT_VIDEO_DIMENSIONS.width,
+                height: DEFAULT_VIDEO_DIMENSIONS.height,
+              }}
+            />
+          ) : (
+            <div className="flex h-[420px] items-center justify-center rounded-xl border border-white/10 text-sm text-white/70">
+              Video ready state unknown. Please reload the page.
+            </div>
+          )}
         </div>
+        {saveState.message && (
+          <p className="text-xs text-white/60">
+            {saveState.isSaving ? saveState.message : `Status: ${saveState.message}`}
+          </p>
+        )}
 
         <div className="space-y-3">
-          {exportState === "completed" && session.exportDownloadUrl ? (
+          {exportState === "completed" && exportUrl ? (
             <a
-              href={session.exportDownloadUrl}
-              download
+              href={exportUrl}
+              download={exportFileName ?? `${session.id}.mp4`}
               className="flex h-14 w-full items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-base font-semibold text-slate-900 shadow-[0_12px_45px_rgba(16,185,129,0.35)] transition hover:scale-[1.01]"
             >
               Download Your Video
@@ -263,7 +326,7 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
             <button
               type="button"
               onClick={handleExport}
-              disabled={exportState === "rendering"}
+              disabled={exportState === "rendering" || !hasVideo}
               className="relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 text-base font-semibold text-white shadow-[0_10px_40px_rgba(99,102,241,0.25)] transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <span

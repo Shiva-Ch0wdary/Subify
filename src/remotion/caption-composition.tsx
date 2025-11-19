@@ -12,9 +12,13 @@ import type { CaptionCompositionProps } from "@/lib/types/captions";
 import { CaptionLayer } from "@/remotion/layers/caption-layer";
 import { sanitizeSegments } from "@/lib/utils/captions";
 
-const resolveVideoSrc = (videoSrc: string) => {
+const resolveVideoSrc = (videoSrc?: string) => {
   if (!videoSrc) return staticFile("samples/sample-input.mp4");
-  if (videoSrc.startsWith("http") || videoSrc.startsWith("blob:")) {
+  if (
+    videoSrc.startsWith("http") ||
+    videoSrc.startsWith("blob:") ||
+    videoSrc.startsWith("file:")
+  ) {
     return videoSrc;
   }
   return staticFile(videoSrc.replace(/^\/+/, ""));

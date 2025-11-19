@@ -1,6 +1,4 @@
 import { randomUUID } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import {
   CAPTION_PLACEMENT_OPTIONS,
@@ -22,25 +20,6 @@ import type {
 import { calculateDurationFromCaptions } from "@/lib/utils/captions";
 
 export const runtime = "nodejs";
-const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
-
-const ensureUploadsDir = async () => {
-  await fs.mkdir(UPLOADS_DIR, { recursive: true });
-};
-
-const normalizeFileName = (input: string) => {
-  const safe = input.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return safe.length ? safe : "upload.mp4";
-};
-
-const saveUploadedFile = async (buffer: Buffer, fileName: string) => {
-  await ensureUploadsDir();
-  const sanitized = normalizeFileName(fileName || "upload.mp4");
-  const filePath = path.join(UPLOADS_DIR, sanitized);
-  await fs.writeFile(filePath, buffer);
-  return `/uploads/${sanitized}`;
-};
-
 const isValidStylePreset = (value: string): value is CaptionStylePreset =>
   CAPTION_STYLE_PRESETS.some((preset) => preset.id === value);
 
@@ -87,16 +66,7 @@ export async function POST(request: NextRequest) {
     const parsedDuration = Number(durationParam);
 
     const sessionId = randomUUID();
-    const originalName = normalizeFileName(file.name || `${sessionId}.mp4`);
-    const sessionFileName = `${sessionId}-${originalName}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const nodeBuffer = Buffer.from(arrayBuffer);
-    const videoSrc = await saveUploadedFile(nodeBuffer, sessionFileName);
-
-    const readableFile = new File([nodeBuffer], originalName, {
-      type: file.type || "video/mp4",
-    });
-    const transcription = await transcribeToCaptions(readableFile);
+    const transcription = await transcribeToCaptions(file);
     const duration =
       Number.isFinite(parsedDuration) && parsedDuration > 0
         ? parsedDuration
@@ -105,12 +75,17 @@ export async function POST(request: NextRequest) {
 
     const session = createSessionRecord({
       id: sessionId,
-      videoSrc,
       captions: transcription.segments,
       stylePreset,
       placement,
       duration,
       language: transcription.language,
+      videoMetadata: {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified,
+      },
     });
 
     await saveSession(session);

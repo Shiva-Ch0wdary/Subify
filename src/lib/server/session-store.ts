@@ -7,6 +7,7 @@ import type {
   CaptionPlacement,
   CaptionStylePreset,
   CaptionSegment,
+  SessionVideoMetadata,
 } from "@/lib/types/captions";
 
 const STORAGE_ROOT = path.join(process.cwd(), "storage");
@@ -42,7 +43,7 @@ export const saveSession = async (session: CaptionSession) => {
 type SessionUpdate = Partial<
   Pick<
     CaptionSession,
-    "captions" | "stylePreset" | "placement" | "duration" | "exportDownloadUrl" | "language"
+    "captions" | "stylePreset" | "placement" | "duration" | "language" | "videoMetadata"
   >
 >;
 
@@ -62,30 +63,30 @@ export const updateSession = async (id: string, patch: SessionUpdate) => {
 
 export const createSessionRecord = ({
   id,
-  videoSrc,
   captions,
   stylePreset,
   placement,
   duration,
   language,
+  videoMetadata,
 }: {
   id: string;
-  videoSrc: string;
   captions: CaptionSegment[];
   stylePreset: CaptionStylePreset;
   placement: CaptionPlacement;
   duration: number;
   language?: string;
+  videoMetadata?: SessionVideoMetadata;
 }): CaptionSession => {
   const now = new Date().toISOString();
   return {
     id,
-    videoSrc,
     captions,
     stylePreset,
     placement,
     duration,
     language,
+    videoMetadata,
     createdAt: now,
     updatedAt: now,
   };

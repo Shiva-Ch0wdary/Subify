@@ -33,15 +33,21 @@ export type CaptionCompositionProps = {
   height?: number;
 };
 
+export type SessionVideoMetadata = {
+  name?: string;
+  size?: number;
+  type?: string;
+  lastModified?: number;
+};
+
 export type CaptionSession = {
   id: string;
-  videoSrc: string;
   captions: CaptionSegment[];
   stylePreset: CaptionStylePreset;
   placement: CaptionPlacement;
   duration: number;
   language?: string;
-  exportDownloadUrl?: string;
+  videoMetadata?: SessionVideoMetadata;
   createdAt: string;
   updatedAt: string;
 };

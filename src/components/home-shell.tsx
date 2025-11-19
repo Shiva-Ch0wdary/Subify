@@ -7,6 +7,7 @@ import type {
   CaptionPlacement,
   CaptionStylePreset,
 } from "@/lib/types/captions";
+import { saveSessionVideo } from "@/lib/client/video-store";
 
 const MAX_FILE_SIZE_MB = 300;
 const DEFAULT_STYLE_PRESET: CaptionStylePreset = "standard";
@@ -18,9 +19,6 @@ export const HomeShell = () => {
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [placement] = useState<CaptionPlacement>(DEFAULT_PLACEMENT);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string>(
-    "Upload an .mp4 to begin."
-  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +38,6 @@ export const HomeShell = () => {
       }
       setVideoFile(null);
       setPreviewUrl(null);
-      setStatusMessage("Upload an .mp4 to begin.");
       return;
     }
 
@@ -60,7 +57,6 @@ export const HomeShell = () => {
     }
     setVideoFile(file);
     setPreviewUrl(nextUrl);
-    setStatusMessage("Ready to generate captions with Whisper.");
   };
 
   const handleSubmit = async () => {
@@ -71,7 +67,6 @@ export const HomeShell = () => {
 
     try {
       setIsSubmitting(true);
-      setStatusMessage("Uploading video to Whisper…");
       setError(null);
 
       const formData = new FormData();
@@ -95,7 +90,14 @@ export const HomeShell = () => {
       }
 
       const session = await response.json();
-      setStatusMessage("Captions ready. Redirecting to studio…");
+      try {
+        await saveSessionVideo(session.id, videoFile);
+      } catch (storageError) {
+        console.error(storageError);
+        throw new Error(
+          "We couldn't save your video locally. Please allow storage access or free up disk space and try again."
+        );
+      }
       router.push(`/studio/${session.id}`);
     } catch (err) {
       console.error(err);
