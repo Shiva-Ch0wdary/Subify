@@ -72,7 +72,7 @@ export const readSession = async (id: string): Promise<CaptionSession | null> =>
 export const saveSession = async (session: CaptionSession) => {
   if (USE_BLOB_STORAGE) {
     await blobPut(sessionBlobPath(session.id), JSON.stringify(session, null, 2), {
-      access: "private",
+      access: "public",
       contentType: "application/json",
       token: process.env.BLOB_READ_WRITE_TOKEN,
       addRandomSuffix: false,
