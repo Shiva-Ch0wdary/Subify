@@ -24,6 +24,9 @@ const REMOTION_NATIVE_PACKAGES = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
+  outputFileTracingIncludes: {
+    "/api/sessions/[sessionId]/export": ["./remotion/**/*"],
+  },
 };
 
 export default nextConfig;
