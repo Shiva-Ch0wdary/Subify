@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Player } from "@remotion/player";
 import {
@@ -24,6 +25,7 @@ type StudioShellProps = {
 type ExportState = "idle" | "rendering" | "error" | "completed";
 
 export const StudioShell = ({ initialSession }: StudioShellProps) => {
+  const router = useRouter();
   const [session, setSession] = useState<CaptionSession>(initialSession);
   const [saveState, setSaveState] = useState<{
     isSaving: boolean;
@@ -44,8 +46,6 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
     isVideoLoading,
     videoError,
     hasVideo,
-    exportUrl,
-    exportFileName,
     setExportBlob,
   } = useSessionMedia({ sessionId: session.id });
 
@@ -64,18 +64,6 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
       }
     };
   }, []);
-
-  useEffect(() => {
-    setExportState((current) => {
-      if (exportUrl && current !== "rendering") {
-        return "completed";
-      }
-      if (!exportUrl && current === "completed") {
-        return "idle";
-      }
-      return current;
-    });
-  }, [exportUrl]);
 
   const beginProgressEmulation = () => {
     if (progressIntervalRef.current) {
@@ -181,6 +169,8 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
       await setExportBlob(blob, `${safeName}-captions.mp4`);
       setExportState("completed");
       stopProgressEmulation(true);
+      router.push(`/download/${session.id}`);
+      return;
     } catch (error) {
       console.error(error);
       stopProgressEmulation(false);
@@ -243,7 +233,7 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
         <div className="flex flex-col gap-2 rounded-2xl border border-white/5 bg-black/40 p-4">
           <p className="text-lg font-semibold text-purple-200">Preview</p>
           <p className="text-sm text-white/70">
-            See how your edited video will look before exporting 🔃
+            See how your edited video will look before exporting.
           </p>
         </div>
         <div className="rounded-2xl border border-white/5 bg-black/40 p-3">
@@ -300,52 +290,33 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
         )}
 
         <div className="space-y-3">
-          {exportState === "completed" && exportUrl ? (
-            <a
-              href={exportUrl}
-              download={exportFileName ?? `${session.id}.mp4`}
-              className="flex h-14 w-full items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-base font-semibold text-slate-900 shadow-[0_12px_45px_rgba(16,185,129,0.35)] transition hover:scale-[1.01]"
-            >
-              Download Your Video
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-5 h-5"
-              >
-                <path d="M12 3v11" />
-                <path d="M7 9l5 5 5-5" />
-                <path d="M5 17h14v3H5z" />
-              </svg>
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exportState === "rendering" || !hasVideo}
-              className="relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 text-base font-semibold text-white shadow-[0_10px_40px_rgba(99,102,241,0.25)] transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <span
-                className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500"
-                style={{
-                  width:
-                    exportState === "rendering"
-                      ? `${Math.max(renderProgress, 12)}%`
-                      : "100%",
-                  transition:
-                    exportState === "rendering" ? "width 0.3s ease" : "none",
-                }}
-              />
-              <span className="relative z-10 mix-blend-lighten">
-                {exportState === "rendering"
-                  ? `Exporting ${Math.round(renderProgress)}%…`
-                  : "Export Video"}    
-              </span>
-            </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exportState === "rendering" || !hasVideo}
+            className="relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 text-base font-semibold text-white shadow-[0_10px_40px_rgba(99,102,241,0.25)] transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <span
+              className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500"
+              style={{
+                width:
+                  exportState === "rendering"
+                    ? `${Math.max(renderProgress, 12)}%`
+                    : "100%",
+                transition:
+                  exportState === "rendering" ? "width 0.3s ease" : "none",
+              }}
+            />
+            <span className="relative z-10 mix-blend-lighten">
+              {exportState === "rendering"
+                ? `Exporting ${Math.round(renderProgress)}%…`
+                : "Export Video"}
+            </span>
+          </button>
+          {exportState === "completed" && (
+            <p className="text-xs text-emerald-200">
+              Exported! Redirecting you to the download hub…
+            </p>
           )}
           {exportState === "error" && exportError && (
             <p className="text-xs text-red-300">{exportError}</p>

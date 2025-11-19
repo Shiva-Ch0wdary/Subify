@@ -1,153 +1,75 @@
-# Remotion Captioning Platform
+# Subify – AI Captioning Studio
 
-Upload `.mp4` files, auto-generate Hinglish captions with OpenAI Whisper, preview three caption styles in Remotion, adjust placement, and export the final video as a downloadable MP4.
+Subify lets creators upload short-form video, generate Hinglish captions with OpenAI Whisper, style them in Remotion, and export both the rendered MP4 and clean subtitle files (SRT/VTT). Everything runs on a local-first storage model so raw videos never touch the deployment filesystem.
 
-## Overview
+## Highlights
 
-- **Upload → Generate → Studio → Export** workflow powered by Next.js App Router.
-- **`POST /api/sessions`** uploads the video, runs Whisper (gpt-4o-mini-transcribe), stores captions, and returns a shareable session id.
-- **Caption Studio (`/studio/[sessionId]`)** replays the video in Remotion Player, exposes style + placement controls, and persists the selection.
-- **`POST /api/sessions/[id]/export`** renders the Remotion composition on the server and streams the MP4 back to the browser (no files are written to `/public`).
-- **Three presets + three placement anchors** (bottom, middle, top) guarantee readable Hinglish subtitles with bundled Noto fonts.
-- **Sample assets** plus CLI command `npm run render:sample` still ship for quick offline testing.
+- **Next.js 16 + App Router** with server actions for uploads, session storage, and Remotion rendering.
+- **OpenAI Whisper (gpt-4o-mini-transcribe)** for super accurate Hinglish transcripts with segment + word timing.
+- **Remotion studio** exposes three caption presets, three placements, and a real-time preview powered by `@remotion/player`.
+- **Download hub** offers MP4, `.srt`, `.vtt`, or a zipped bundle—no re-rendering required.
+- **Local-first privacy**: uploads stay inside the browser’s IndexedDB and are streamed to the server only during transcription/export.
 
-## Local-first storage
+## Architecture Snapshot
 
-- Uploaded videos never touch the server filesystem anymore. They live inside your browser's IndexedDB and are only streamed to the API when transcription/export is running.
-- This keeps deployments (Vercel/Netlify) happy because no handler attempts to write into `public/`.
-- If you clear browser storage you will need to re-upload the source video before exporting again.
-
-## Tech Stack
-
-| Layer | Tech |
+| Concern | Implementation |
 | --- | --- |
-| Framework | Next.js 16 (App Router, TypeScript) |
-| Styling | Tailwind CSS v4 + CSS custom properties |
-| Caption Rendering | Remotion + `@remotion/player` / `@remotion/renderer` |
-| Speech-to-Text | OpenAI Whisper API (`gpt-4o-mini-transcribe`) |
-| State & Utils | React Hooks, light-weight session store, Zod-ready schema utils |
-| Deployment | Vercel (Node.js 20 runtime) |
+| UI / Routing | Next.js App Router, React Server Components, Tailwind CSS v4 |
+| Rendering | Remotion (`@remotion/player`, `@remotion/renderer`) |
+| Speech-to-Text | OpenAI Whisper via `openai` SDK |
+| Persistence | JSON session store under `storage/` + browser IndexedDB for raw media |
+| Deployment Target | Vercel / Node.js 20 serverless functions |
 
-## Getting Started
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+- OpenAI account + Whisper API key (`OPENAI_API_KEY`)
+
+## Setup
 
 ```bash
 git clone <repo>
 cd remotion-captioning-platform
 npm install
-cp .env.local.example .env.local
+cp .env.local.example .env.local   # provide OPENAI_API_KEY
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to use the UI.
+Visit `http://localhost:3000` and drop an `.mp4` (≤300 MB) to get started.
 
-## Environment Variables
+## Workflow
 
-| Key | Description |
+1. **Upload** – the landing page validates the file, stores it in IndexedDB, and POSTs to `/api/sessions` for Whisper transcription.
+2. **Studio** – `/studio/[sessionId]` loads captions, lets you switch styles/placements, and previews everything in Remotion.
+3. **Export** – clicking *Export MP4* streams the original video from the browser to `/api/sessions/[id]/export`. Remotion renders the composition on the server and returns the MP4 stream; the resulting blob is cached locally.
+4. **Download hub** – after export the app redirects to `/download/[sessionId]` where you can grab:
+   - MP4 with burned-in captions
+   - `.srt` and `.vtt` sidecar files (generated client-side)
+   - A `.zip` bundle containing MP4 + both subtitle formats
+
+You can always hop back into the studio to change styles and export again.
+
+## Subtitle generation
+
+Sanitized `CaptionSegment`s feed two helpers (`captionsToSrt`, `captionsToVtt`) in `src/lib/utils/subtitles.ts`. They normalize timestamps, handle multiline content, and ensure WebVTT + SRT specs are met. The helpers power both individual downloads and the bundle workflow.
+
+## Scripts
+
+| Command | Description |
 | --- | --- |
-| `OPENAI_API_KEY` | Server-side key for Whisper (gpt-4o-mini-transcribe). Required for `/api/sessions` and `/api/generate-captions`. |
+| `npm run dev` | Start Next.js locally with hot reload.
+| `npm run build` / `npm start` | Production build + serve.
+| `npm run lint` | ESLint across the entire project.
+| `npm run render:sample` | CLI Remotion render using `assets/sample-captions.json` → `out/sample-output.mp4`.
 
-> Never expose this key to the browser. Both API routes stream uploads directly to OpenAI from the Node runtime.
+## Deployment notes
 
-## Caption Generation Method
+- **Environment** – define `OPENAI_API_KEY` in your hosting provider. Keys are only read server-side.
+- **Storage** – the repo ships with empty `storage/sessions/.gitkeep` and `storage/renders/.gitkeep`. At runtime these directories persist caption metadata only; raw uploads never land here.
+- **Static assets** – sample media lives in `assets/` + `public/samples/` strictly for demos/testing.
+- **Cleaning** – no generated exports or session JSONs are committed, keeping the repo production-ready.
 
-1. Client uploads `.mp4`, validating size (< 300 MB) and type before hitting the server.
-2. `POST /api/sessions` (or `/api/generate-captions` for raw transcripts) parses multipart form data, streams it directly to Whisper, and never touches the deployment filesystem.
-3. OpenAI SDK call:
+Once deployed, the workflow remains identical: uploads stay local to the browser, Whisper runs inside your serverless region, and rendered MP4/subtitle downloads are delivered through the download hub.
 
-   ```ts
-   const transcription = await openai.audio.transcriptions.create({
-     file,
-     model: "gpt-4o-mini-transcribe",
-     response_format: "verbose_json",
-     timestamp_granularities: ["segment", "word"],
-     temperature: 0.2,
-   });
-   ```
-
-4. The response normalizes to:
-
-   ```ts
-   type CaptionSegment = {
-     id: number;
-     start: number; // seconds
-     end: number;
-     text: string; // Hinglish-safe
-     words?: { id: number; text: string; start: number; end: number }[];
-   };
-   ```
-
-5. Karaoke timing is auto-generated when word timestamps are missing by distributing the segment duration across tokens.
-
-## Using the App
-
-1. **Upload** an `.mp4` on the landing page. Optional: pre-select a style + placement.
-2. Click **Generate & open studio**. This calls `POST /api/sessions`, uploads the file, runs Whisper, and returns a session id.
-3. The app redirects to `/studio/[sessionId]`, where the Remotion Player previews your uploaded video with live captions.
-4. **Adjust** the caption style (Standard, Top Bar, Karaoke) and placement (bottom, middle, top). Changes persist via `PATCH /api/sessions/[id]`.
-5. Hit **Export MP4** to invoke `POST /api/sessions/[id]/export`. Once rendering completes, a download button appears.
-
-### Caption Style & Placement Presets
-
-| Preset | Description |
-| --- | --- |
-| `standard` | Bottom-center translucent pill. Ideal for social subtitles. |
-| `topBar` | Full-width news ticker with uppercase text, suited for reels or highlight text. |
-| `karaoke` | Word-by-word highlight using per-word timestamps or synthetic interpolation. |
-
-| Placement | Description |
-| --- | --- |
-| `bottom` | Sticks to lower safe area for traditional subtitles. |
-| `middle` | Floats captions mid-frame to avoid lower-third graphics. |
-| `top` | Anchors near the top safe area, ideal for reels. |
-
-Fonts (`Noto Sans`, `Noto Sans Devanagari`, `Space Grotesk`) are registered on both the web client and Remotion CLI to preserve Hinglish glyph fidelity.
-
-## Export Options
-
-### In-app MP4 export
-
-- Use the **Export MP4** button on `/studio/[sessionId]`.
-- The browser re-uploads the original video from IndexedDB, the server bundles `remotion/Root.tsx`, renders the Remotion composition, and streams the MP4 back immediately (nothing is written to disk).
-- The resulting blob is cached locally so you can download it again without re-exporting.
-
-### CLI render (sample props)
-
-1. Ensure `assets/sample-captions.json` references the desired captions/video (default: `public/samples/sample-input.mp4`).
-2. Run:
-
-   ```bash
-   npm run render:sample
-   # Outputs out/sample-output.mp4
-   ```
-
-This command is useful for CI or bulk renders from a saved props JSON.
-
-## Deployment (Vercel)
-
-1. Push the repo to GitHub.
-2. In Vercel, **Create Project** → import the repo.
-3. Set **Environment Variables** → `OPENAI_API_KEY`.
-4. Use Node.js 20 runtime (default).  
-5. Deploy. Serverless functions `/api/sessions` and `/api/generate-captions` handle Whisper requests; ensure the region you pick is close to OpenAI for lower latency.
-
-## Sample Inputs & Outputs
-
-- `assets/sample-input.mp4` — bundled demo clip (duplicated to `public/samples/sample-input.mp4` for browser preview).
-- `assets/sample-output.mp4` — placeholder render; running `npm run render:sample` refreshes it with the latest caption props.
-- `assets/sample-captions.json` — ready-to-use CLI props referencing the sample video and default Standard preset.
-
-## Optional Offline Whisper
-
-If you need completely offline transcription, Whisper.cpp or `faster-whisper` can replace the API route. You would upload the video, transcode to 16 kHz mono, run a local model, and feed the response through the same normalization helper used in this repo. This is not implemented here but is compatible with the existing API contract.
-
-## Testing & Sign-off Checklist
-
-- [ ] Upload `.mp4` (sample or custom) works and previews instantly.
-- [ ] Whisper API returns accurate Hinglish captions.
-- [ ] All three caption presets + placements visibly update the Remotion Player overlay.
-- [ ] CLI command `npm run render:sample` outputs `out/sample-output.mp4`.
-- [ ] README + `/docs` route explain the architecture and export flow.
-- [ ] Deployment on Vercel completes with environment variables configured.
-- [ ] Sample input/output assets exist in `/assets` and are referenced in docs.
-
-Happy captioning!
+Happy captioning! 🎬

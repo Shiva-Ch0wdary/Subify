@@ -21,6 +21,7 @@ export const useSessionMedia = ({ sessionId }: UseSessionVideoOptions) => {
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [isExportLoading, setIsExportLoading] = useState(true);
   const [exportFileName, setExportFileName] = useState<string | null>(null);
+  const [exportFile, setExportFile] = useState<File | null>(null);
 
   const revokeRef = useRef<(() => void) | null>(null);
   const revokeExportRef = useRef<(() => void) | null>(null);
@@ -63,8 +64,10 @@ export const useSessionMedia = ({ sessionId }: UseSessionVideoOptions) => {
         }
         setExportUrl(null);
         setExportFileName(null);
+        setExportFile(null);
         return;
       }
+      setExportFile(stored);
       const nextUrl = URL.createObjectURL(stored);
       if (revokeExportRef.current) {
         revokeExportRef.current();
@@ -76,6 +79,7 @@ export const useSessionMedia = ({ sessionId }: UseSessionVideoOptions) => {
       console.error("Failed to load stored export", error);
       setExportUrl(null);
       setExportFileName(null);
+      setExportFile(null);
     } finally {
       setIsExportLoading(false);
     }
@@ -125,6 +129,7 @@ export const useSessionMedia = ({ sessionId }: UseSessionVideoOptions) => {
     isExportLoading,
     setExportBlob,
     exportFileName,
+    exportFile,
     clearExportBlob,
   };
 };

@@ -25,7 +25,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Remotion Captioning Platform",
+  title: "Subify",
   description:
     "Upload MP4, auto-generate Hinglish captions, preview styles in Remotion, and export via CLI.",
 };
