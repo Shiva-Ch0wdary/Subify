@@ -40,9 +40,9 @@ Visit `http://localhost:3000` and drop an `.mp4` (≤300 MB) to get started.
 
 ## Workflow
 
-1. **Upload** - the landing page validates the file, stores it in IndexedDB, and POSTs to `/api/sessions` for Whisper transcription.
+1. **Upload** - the landing page validates the file, stores it in IndexedDB, uploads the file to Vercel Blob via `/api/uploads`, and POSTs the blob reference to `/api/sessions` for Whisper transcription.
 2. **Studio** - `/studio/[sessionId]` loads captions, lets you switch styles/placements, and previews everything in Remotion.
-3. **Export** - clicking *Export MP4* streams the original video from the browser to `/api/sessions/[id]/export`. Remotion renders the composition on the server and returns the MP4 stream; the resulting blob is cached locally.
+3. **Export** - clicking *Export MP4* triggers the same blob upload flow and sends the reference to `/api/sessions/[id]/export`. Remotion renders the composition on the server and returns the MP4 stream; the resulting blob is cached locally.
 4. **Download hub** - after export the app redirects to `/download/[sessionId]` where you can grab:
    - MP4 with burned-in captions
    - `.srt` and `.vtt` sidecar files (generated client-side)
@@ -65,8 +65,9 @@ Sanitized `CaptionSegment`s feed two helpers (`captionsToSrt`, `captionsToVtt`) 
 
 ## Deployment notes
 
-- **Environment** - define `OPENAI_API_KEY` in your hosting provider. Keys are only read server-side.
+- **Environment** - set `OPENAI_API_KEY` and `BLOB_READ_WRITE_TOKEN` in your hosting provider. The Blob token is required for signing upload URLs and purging temporary files.
 - **Storage** - the repo ships with empty `storage/sessions/.gitkeep` and `storage/renders/.gitkeep`. At runtime these directories persist caption metadata only; raw uploads never land here.
+- **Blob uploads** - enable [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for the project; the `/api/uploads` route mints signed URLs so large videos never hit the serverless body-size limit.
 - **Static assets** - sample media lives in `assets/` + `public/samples/` strictly for demos/testing.
 - **Cleaning** - no generated exports or session JSONs are committed, keeping the repo production-ready.
 

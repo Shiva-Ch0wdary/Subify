@@ -8,6 +8,7 @@ import type {
   CaptionStylePreset,
 } from "@/lib/types/captions";
 import { saveSessionVideo } from "@/lib/client/video-store";
+import { uploadFileToBlob } from "@/lib/client/blob-upload";
 
 const MAX_FILE_SIZE_MB = 300;
 const DEFAULT_STYLE_PRESET: CaptionStylePreset = "standard";
@@ -69,17 +70,37 @@ export const HomeShell = () => {
       setIsSubmitting(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append("file", videoFile);
-      formData.append("stylePreset", DEFAULT_STYLE_PRESET);
-      formData.append("placement", placement);
-      if (videoDuration) {
-        formData.append("duration", String(videoDuration));
+      let requestInit: RequestInit = {};
+      try {
+        const upload = await uploadFileToBlob(videoFile);
+        requestInit = {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            blobUrl: upload.url,
+            blobPath: upload.pathname,
+            fileName: videoFile.name,
+            mimeType: videoFile.type,
+            size: videoFile.size,
+            stylePreset: DEFAULT_STYLE_PRESET,
+            placement,
+            duration: videoDuration,
+          }),
+        };
+      } catch (uploadError) {
+        console.warn("Falling back to direct upload", uploadError);
+        const formData = new FormData();
+        formData.append("file", videoFile);
+        formData.append("stylePreset", DEFAULT_STYLE_PRESET);
+        formData.append("placement", placement);
+        if (videoDuration) {
+          formData.append("duration", String(videoDuration));
+        }
+        requestInit = { body: formData };
       }
 
       const response = await fetch("/api/sessions", {
         method: "POST",
-        body: formData,
+        ...requestInit,
       });
 
       if (!response.ok) {

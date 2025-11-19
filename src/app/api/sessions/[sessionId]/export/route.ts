@@ -11,6 +11,7 @@ import { renderCaptionVideo } from "@/lib/server/remotion-renderer";
 import { sanitizeSegments } from "@/lib/utils/captions";
 import { validateUploadFile } from "@/lib/server/transcription";
 import { createTempAssetServer } from "@/lib/server/temp-asset-server";
+import { del } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -68,6 +69,32 @@ const deleteWithRetries = async (targetPath: string, attempts = 5) => {
   }
 };
 
+const resolveExportUpload = async (request: NextRequest) => {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+    if (!body?.blobUrl) {
+      throw new Error("Missing uploaded video reference.");
+    }
+    const response = await fetch(body.blobUrl);
+    if (!response.ok) {
+      throw new Error("Failed to download uploaded video.");
+    }
+    const buffer = await response.arrayBuffer();
+    const file = new File([buffer], body.fileName ?? "upload.mp4", {
+      type: body.mimeType ?? "video/mp4",
+      lastModified: body.lastModified ?? Date.now(),
+    });
+    return { file, blobUrl: body.blobUrl as string };
+  }
+  const formData = await request.formData();
+  const file = formData.get("file");
+  if (!file || !(file instanceof File)) {
+    throw new Error("Expected `file` in form data.");
+  }
+  return { file, blobUrl: null };
+};
+
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
@@ -75,16 +102,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!session) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
-
-    const formData = await request.formData();
-    const file = formData.get("file");
-
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "Expected original video in form data." },
-        { status: 400 },
-      );
-    }
+    const { file, blobUrl } = await resolveExportUpload(request);
 
     validateUploadFile(file);
 
@@ -139,6 +157,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     } catch (error) {
       await removeTmpDir();
       throw error;
+    } finally {
+      if (blobUrl) {
+        await del(blobUrl).catch((err) =>
+          console.warn("[sessions:export] blob cleanup failed", err),
+        );
+      }
     }
   } catch (error) {
     console.error("[sessions:export]", error);

@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types/captions";
 import { CaptionComposition } from "@/remotion/caption-composition";
 import { useSessionMedia } from "@/hooks/use-session-video";
+import { uploadFileToBlob } from "@/lib/client/blob-upload";
 
 type StudioShellProps = {
   initialSession: CaptionSession;
@@ -150,12 +151,29 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
     setExportError(null);
     beginProgressEmulation();
     try {
-      const formData = new FormData();
-      formData.append("file", videoFile);
+      let requestInit: RequestInit = {};
+      try {
+        const upload = await uploadFileToBlob(videoFile);
+        requestInit = {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            blobUrl: upload.url,
+            blobPath: upload.pathname,
+            fileName: videoFile.name,
+            mimeType: videoFile.type,
+            size: videoFile.size,
+          }),
+        };
+      } catch (uploadError) {
+        console.warn("Falling back to direct export upload", uploadError);
+        const formData = new FormData();
+        formData.append("file", videoFile);
+        requestInit = { body: formData };
+      }
 
       const response = await fetch(`/api/sessions/${session.id}/export`, {
         method: "POST",
-        body: formData,
+        ...requestInit,
       });
       if (!response.ok) {
         const message =
