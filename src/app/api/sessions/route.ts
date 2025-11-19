@@ -20,6 +20,13 @@ import type {
 import { calculateDurationFromCaptions } from "@/lib/utils/captions";
 
 export const runtime = "nodejs";
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "400mb",
+    },
+  },
+};
 const isValidStylePreset = (value: string): value is CaptionStylePreset =>
   CAPTION_STYLE_PRESETS.some((preset) => preset.id === value);
 

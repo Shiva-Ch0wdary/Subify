@@ -1,6 +1,7 @@
 import "server-only";
 
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import type {
   CaptionSession,
@@ -10,7 +11,15 @@ import type {
   SessionVideoMetadata,
 } from "@/lib/types/captions";
 
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
+const STORAGE_ROOT = (() => {
+  if (process.env.SUBIFY_STORAGE_ROOT) {
+    return process.env.SUBIFY_STORAGE_ROOT;
+  }
+  if (process.env.VERCEL) {
+    return path.join(os.tmpdir(), "subify-storage");
+  }
+  return path.join(process.cwd(), "storage");
+})();
 const SESSIONS_DIR = path.join(STORAGE_ROOT, "sessions");
 
 const ensureDir = async (dir: string) => {
