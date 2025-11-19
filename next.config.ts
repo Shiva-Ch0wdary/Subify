@@ -26,7 +26,11 @@ const REMOTION_NATIVE_PACKAGES = [
 const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
   outputFileTracingIncludes: {
-    "/api/sessions/[sessionId]/export": [path.join(process.cwd(), "remotion/**/*")],
+    "/api/sessions/[sessionId]/export": [
+      path.join(process.cwd(), "remotion/**/*"),
+      // Remotion bundles import fonts dynamically, so manually trace the package.
+      path.join(process.cwd(), "node_modules/@remotion/google-fonts/**/*"),
+    ],
   },
 };
 
