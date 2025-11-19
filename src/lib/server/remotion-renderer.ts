@@ -27,6 +27,7 @@ type MutableWebpackConfig = {
     extensions?: string[];
     [key: string]: unknown;
   };
+  externals?: unknown[];
   [key: string]: unknown;
 };
 
@@ -61,6 +62,9 @@ const applyWebpackAlias = (config: MutableWebpackConfig) => {
   config.resolve.alias = {
     ...(config.resolve.alias ?? {}),
     "@": SRC_DIR,
+    // Prevent @remotion/studio from being bundled (it's dev-only)
+    "@remotion/studio": false as unknown as string,
+    "@remotion/studio-shared": false as unknown as string,
   };
   config.resolve.extensions = Array.from(
     new Set([...(config.resolve.extensions ?? []), ".ts", ".tsx", ".js", ".jsx", ".mjs"]),
