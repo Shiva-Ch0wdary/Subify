@@ -59,12 +59,12 @@ export async function POST(request: NextRequest) {
       if (!body?.blobUrl) {
         return NextResponse.json({ error: "Missing uploaded video reference." }, { status: 400 });
       }
-      blobUrl = body.blobUrl;
+      blobUrl = String(body.blobUrl);
       stylePresetParam = body.stylePreset ?? null;
       placementParam = body.placement ?? null;
       durationParam = body.duration ?? null;
       fileSource = await downloadBlobAsFile({
-        blobUrl,
+        blobUrl: blobUrl as string,
         fileName: body.fileName,
         mimeType: body.mimeType,
         lastModified: body.lastModified,
