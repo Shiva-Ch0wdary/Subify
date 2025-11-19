@@ -1,7 +1,7 @@
 import { Composition, registerRoot } from "remotion";
 import type { CalculateMetadataFunction } from "remotion";
 import { CaptionComposition } from "./CaptionComposition";
-import "./fonts";
+import { ensureCaptionFonts } from "./fonts";
 import {
   DEFAULT_FPS,
   DEFAULT_VIDEO_DIMENSIONS,
@@ -26,12 +26,16 @@ const defaultProps: CaptionCompositionProps = {
 
 export const RemotionRoot = () => {
   const durationInFrames =
-    Math.ceil(calculateDurationFromCaptions(defaultProps.captions) * DEFAULT_FPS) +
-    DEFAULT_FPS;
+    Math.ceil(
+      calculateDurationFromCaptions(defaultProps.captions) * DEFAULT_FPS
+    ) + DEFAULT_FPS;
 
-  const calculateMetadata: CalculateMetadataFunction<CaptionCompositionProps> = async ({
-    props,
-  }) => {
+  const calculateMetadata: CalculateMetadataFunction<
+    CaptionCompositionProps
+  > = async ({ props }) => {
+    // Ensure fonts are loaded before rendering
+    await ensureCaptionFonts();
+
     const safeCaptions = props.captions ?? defaultProps.captions;
     const fps = props.fps ?? DEFAULT_FPS;
     const effectiveDuration =

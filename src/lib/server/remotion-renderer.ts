@@ -71,17 +71,25 @@ const applyWebpackAlias = (config: MutableWebpackConfig) => {
 const bundleRemotionProject = async () => {
   if (!serveUrlPromise) {
     serveUrlPromise = loadRemotionModules()
-      .then(({ bundle }) =>
+      .then(async ({ bundle }) => {
+        // Preload fonts before bundling to ensure they're available
+        try {
+          const { ensureCaptionFonts } = await import("../../../remotion/fonts");
+          await ensureCaptionFonts();
+        } catch (error) {
+          console.warn("[remotion] Font preload failed, continuing with fallback", error);
+        }
+
         // The bundler typings still expect the legacy positional arguments signature.
         // Cast to `any` so we can use the modern options object without type noise.
-        (bundle as unknown as (options: Record<string, unknown>) => Promise<string>)({
+        return (bundle as unknown as (options: Record<string, unknown>) => Promise<string>)({
           entryPoint: REMOTION_ENTRY,
           publicDir: PUBLIC_DIR,
           webpackOverride: applyWebpackAlias,
           enableCaching: false,
           cacheDir: REMOTION_CACHE_DIR,
-        }),
-      )
+        });
+      })
       .catch((error) => {
         serveUrlPromise = null;
         throw error;
