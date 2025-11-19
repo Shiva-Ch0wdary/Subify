@@ -61,7 +61,9 @@ const bundleRemotionProject = async () => {
   if (!serveUrlPromise) {
     serveUrlPromise = loadRemotionModules()
       .then(({ bundle }) =>
-        bundle({
+        // The bundler typings still expect the legacy positional arguments signature.
+        // Cast to `any` so we can use the modern options object without type noise.
+        (bundle as unknown as (options: Record<string, unknown>) => Promise<string>)({
           entryPoint: REMOTION_ENTRY,
           publicDir: PUBLIC_DIR,
           webpackOverride: applyWebpackAlias,

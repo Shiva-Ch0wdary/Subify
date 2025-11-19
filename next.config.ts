@@ -23,9 +23,7 @@ const REMOTION_NATIVE_PACKAGES = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: REMOTION_NATIVE_PACKAGES,
-  },
+  serverExternalPackages: REMOTION_NATIVE_PACKAGES,
 };
 
 export default nextConfig;

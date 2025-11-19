@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import { createReadStream } from "fs";
 import { promises as fs } from "fs";
 import os from "os";
@@ -30,7 +31,10 @@ const streamFile = (filePath: string, cleanup?: () => Promise<void> | void) => {
   return new ReadableStream<Uint8Array>({
     start(controller) {
       stream = createReadStream(filePath);
-      stream.on("data", (chunk) => controller.enqueue(chunk));
+      stream.on("data", (chunk) => {
+        const payload = chunk instanceof Buffer ? chunk : Buffer.from(chunk);
+        controller.enqueue(new Uint8Array(payload));
+      });
       stream.on("end", () => {
         controller.close();
         stream?.close();
