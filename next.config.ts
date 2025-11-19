@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 if (process.platform === "win32" && typeof process.setSourceMapsEnabled === "function") {
   // Next.js dev builds produce invalid file:// source map URLs on Windows paths that contain spaces.
@@ -25,7 +26,7 @@ const REMOTION_NATIVE_PACKAGES = [
 const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
   outputFileTracingIncludes: {
-    "/api/sessions/[sessionId]/export": ["./remotion/**/*"],
+    "/api/sessions/[sessionId]/export": [path.join(__dirname, "remotion/**/*")],
   },
 };
 

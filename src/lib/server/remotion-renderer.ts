@@ -1,11 +1,20 @@
 import "server-only";
 
+import os from "os";
 import path from "path";
 import type { CaptionCompositionProps } from "@/lib/types/captions";
 
 const REMOTION_ENTRY = path.join(process.cwd(), "remotion", "Root.tsx");
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const SRC_DIR = path.join(process.cwd(), "src");
+const REMOTION_CACHE_DIR = path.join(os.tmpdir(), "remotion-cache");
+
+if (!process.env.REMOTION_DISABLE_CACHE) {
+  process.env.REMOTION_DISABLE_CACHE = "true";
+}
+if (!process.env.REMOTION_CACHE_LOCATION) {
+  process.env.REMOTION_CACHE_LOCATION = REMOTION_CACHE_DIR;
+}
 
 type RendererModule = typeof import("@remotion/renderer");
 type BundlerModule = typeof import("@remotion/bundler");
@@ -67,6 +76,8 @@ const bundleRemotionProject = async () => {
           entryPoint: REMOTION_ENTRY,
           publicDir: PUBLIC_DIR,
           webpackOverride: applyWebpackAlias,
+          enableCaching: false,
+          cacheDir: REMOTION_CACHE_DIR,
         }),
       )
       .catch((error) => {
