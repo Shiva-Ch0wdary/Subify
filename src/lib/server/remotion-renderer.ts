@@ -4,9 +4,11 @@ import os from "os";
 import path from "path";
 import type { CaptionCompositionProps } from "@/lib/types/captions";
 
-const REMOTION_ENTRY = path.join(process.cwd(), "remotion", "Root.tsx");
-const PUBLIC_DIR = path.join(process.cwd(), "public");
-const SRC_DIR = path.join(process.cwd(), "src");
+const ROOT_DIR = process.cwd();
+const REMOTION_DIR = path.join(ROOT_DIR, "remotion");
+const REMOTION_ENTRY = path.join(REMOTION_DIR, "Root.tsx");
+const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const SRC_DIR = path.join(ROOT_DIR, "src");
 const REMOTION_CACHE_DIR = path.join(os.tmpdir(), "remotion-cache");
 
 if (!process.env.REMOTION_DISABLE_CACHE) {
