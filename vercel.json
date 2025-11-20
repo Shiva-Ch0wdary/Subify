@@ -4,11 +4,5 @@
       "REMOTION_STUDIO_ENABLED": "false",
       "REMOTION_DISABLE_CACHE": "true"
     }
-  },
-  "functions": {
-    "src/app/api/sessions/[sessionId]/export/route.ts": {
-      "memory": 1024,
-      "maxDuration": 300
-    }
   }
 }

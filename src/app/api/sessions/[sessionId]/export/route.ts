@@ -97,6 +97,19 @@ const resolveExportUpload = async (request: NextRequest) => {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
+    // Check if we're in a serverless environment (Vercel)
+    const isServerless = process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    if (isServerless) {
+      return NextResponse.json(
+        {
+          error: "Server-side video rendering is not supported in serverless environments. Please use client-side rendering with @remotion/player or deploy to a server with FFmpeg support.",
+          hint: "For production, consider using @remotion/lambda for AWS Lambda rendering, or use a VM/container-based hosting solution.",
+        },
+        { status: 501 } // Not Implemented
+      );
+    }
+
     const { sessionId } = await context.params;
     const session = await readSession(sessionId);
     if (!session) {
