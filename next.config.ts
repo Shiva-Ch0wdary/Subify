@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { createRequire } from "module";
 import path from "path";
 
 if (process.platform === "win32" && typeof process.setSourceMapsEnabled === "function") {
@@ -6,6 +7,14 @@ if (process.platform === "win32" && typeof process.setSourceMapsEnabled === "fun
   // Turning off Node's automatic source map loading avoids the noisy runtime errors while keeping stack traces readable.
   process.setSourceMapsEnabled(false);
 }
+
+const require = createRequire(import.meta.url);
+const ROOT_DIR = process.cwd();
+const REMOTION_DIR = path.join(ROOT_DIR, "remotion");
+const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const REMOTION_FONTS_DIR = path.dirname(require.resolve("@remotion/google-fonts/package.json"));
+const REMOTION_BUNDLER_DIR = path.dirname(require.resolve("@remotion/bundler/package.json"));
+const REMOTION_BUNDLER_FAVICON = path.join(REMOTION_BUNDLER_DIR, "favicon.ico");
 
 const REMOTION_NATIVE_PACKAGES = [
   "@remotion/bundler",
@@ -29,12 +38,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
   outputFileTracingIncludes: {
     "/api/sessions/[sessionId]/export": [
-      path.join(process.cwd(), "remotion/**/*"),
-      path.join(process.cwd(), "public/**/*"),
-      // Remotion bundles import fonts dynamically, so manually trace the package.
-      path.join(process.cwd(), "node_modules/@remotion/google-fonts/**/*"),
-      // Include bundler assets to prevent favicon copy errors
-      path.join(process.cwd(), "node_modules/@remotion/bundler/**/*"),
+      REMOTION_DIR,
+      PUBLIC_DIR,
+      // Remotion bundles import fonts dynamically, so manually trace the package directory.
+      REMOTION_FONTS_DIR,
+      // Include bundler assets (especially the favicon) to prevent ENOENT errors at runtime.
+      REMOTION_BUNDLER_DIR,
+      REMOTION_BUNDLER_FAVICON,
     ],
   },
   // Empty turbopack config to acknowledge we're using Turbopack
