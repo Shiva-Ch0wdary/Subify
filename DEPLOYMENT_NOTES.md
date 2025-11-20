@@ -16,7 +16,8 @@ Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/ex
    - `export` route uses `runtime = "nodejs"` with 1024 MB / 300 s limits (see `vercel.json`). Increase the memory if exports regularly exceed the current limit.
 
 3. **Temp storage**  
-   - Renders stream to `/tmp`. The handler deletes temp files via `deleteWithRetries` to stay within the Lambda 512 MB writeable storage cap.
+   - Renders stream to `/tmp`. The handler deletes temp files via `deleteWithRetries` to stay within the Lambda 512 MB writeable storage cap.
+   - `REMOTION_DATA_DIR` and `REMOTION_CACHE_LOCATION` are set to `/tmp` directories to prevent Remotion from attempting to write to read-only `/var/task/node_modules/.remotion`.
 
 4. **Fonts and assets**  
    - `remotion/fonts.ts` is executed before bundling to ensure caption fonts exist.  
@@ -32,9 +33,10 @@ Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/ex
 
 | Symptom | Likely Cause | Fix |
 | --- | --- | --- |
+| `ENOENT: no such file or directory, mkdir '/var/task/node_modules/.remotion'` | Remotion trying to write to read-only filesystem | Ensure `REMOTION_DATA_DIR=/tmp/remotion-data` is set in environment variables |
 | `ENOENT @remotion/compositor-*` | Missing native package in bundle | Confirm the package exists on Vercel build host and that `serverExternalPackages` lists it |
 | `favicon.ico` ENOENT | Bundler asset not traced | Already mitigated via fallback copy in `remotion-renderer.ts`; re-run deploy |
-| `Socket hang up` / timeout | Render exceeded 300 s | Raise `maxDuration` or reduce export resolution/FPS |
+| `Socket hang up` / timeout | Render exceeded 300 s | Raise `maxDuration` or reduce export resolution/FPS |
 
 ## Alternatives
 

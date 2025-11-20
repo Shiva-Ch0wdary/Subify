@@ -4,5 +4,17 @@
       "REMOTION_STUDIO_ENABLED": "false",
       "REMOTION_DISABLE_CACHE": "true"
     }
+  },
+  "functions": {
+    "api/sessions/[sessionId]/export.func": {
+      "maxDuration": 300,
+      "memory": 1024
+    }
+  },
+  "env": {
+    "REMOTION_STUDIO_ENABLED": "false",
+    "REMOTION_DISABLE_CACHE": "true",
+    "REMOTION_DATA_DIR": "/tmp/remotion-data",
+    "REMOTION_CACHE_LOCATION": "/tmp/remotion-cache"
   }
 }

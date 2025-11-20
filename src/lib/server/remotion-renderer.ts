@@ -35,6 +35,10 @@ if (!process.env.REMOTION_DISABLE_CACHE) {
 if (!process.env.REMOTION_CACHE_LOCATION) {
   process.env.REMOTION_CACHE_LOCATION = REMOTION_CACHE_DIR;
 }
+// Prevent Remotion from trying to write to node_modules/.remotion in serverless environments
+if (!process.env.REMOTION_DATA_DIR) {
+  process.env.REMOTION_DATA_DIR = path.join(os.tmpdir(), "remotion-data");
+}
 
 type RendererModule = typeof import("@remotion/renderer");
 type BundlerModule = typeof import("@remotion/bundler");
