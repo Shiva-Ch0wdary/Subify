@@ -1,5 +1,6 @@
 import "server-only";
 
+import fs from "fs";
 import os from "os";
 import path from "path";
 import type { CaptionCompositionProps } from "@/lib/types/captions";
@@ -10,6 +11,19 @@ const REMOTION_ENTRY = path.join(REMOTION_DIR, "Root.tsx");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const SRC_DIR = path.join(ROOT_DIR, "src");
 const REMOTION_CACHE_DIR = path.join(os.tmpdir(), "remotion-cache");
+const REMOTION_BUNDLER_FAVICON = path.join(
+  ROOT_DIR,
+  "node_modules",
+  "@remotion",
+  "bundler",
+  "favicon.ico",
+);
+const REMOTION_FAVICON_FALLBACK = path.join(
+  ROOT_DIR,
+  "assets",
+  "remotion-bundler-favicon.ico",
+);
+let bundlerFaviconPatched = false;
 
 // Disable Remotion Studio (not needed for server-side rendering)
 if (!process.env.REMOTION_STUDIO_ENABLED) {
@@ -45,9 +59,48 @@ type RemotionModules = {
 let remotionModulesPromise: Promise<RemotionModules> | null = null;
 let serveUrlPromise: Promise<string> | null = null;
 
+const patchBundlerFaviconCopy = () => {
+  if (bundlerFaviconPatched) return;
+  bundlerFaviconPatched = true;
+  const originalCopy = fs.copyFileSync.bind(fs);
+  fs.copyFileSync = ((source: fs.PathLike, destination: fs.PathLike, mode?: number) => {
+    const sourcePath = typeof source === "string" ? source : source.toString();
+    if (sourcePath.includes("@remotion/bundler/favicon.ico")) {
+      try {
+        return originalCopy(source, destination, mode);
+      } catch (error) {
+        const nodeError = error as NodeJS.ErrnoException;
+        if (
+          nodeError.code !== "ENOENT" &&
+          nodeError.code !== "ENOTDIR" &&
+          nodeError.code !== "EISDIR"
+        ) {
+          throw error;
+        }
+        const fallbackSource = fs.existsSync(REMOTION_FAVICON_FALLBACK)
+          ? REMOTION_FAVICON_FALLBACK
+          : null;
+        if (fallbackSource) {
+          console.warn(
+            `[remotion] Missing bundler favicon at ${REMOTION_BUNDLER_FAVICON}, copying fallback asset instead.`,
+          );
+          return originalCopy(fallbackSource, destination, mode);
+        }
+        console.warn(
+          `[remotion] Missing bundler favicon at ${REMOTION_BUNDLER_FAVICON}, writing empty placeholder to keep bundling going.`,
+        );
+        fs.writeFileSync(destination, Buffer.alloc(0));
+        return;
+      }
+    }
+    return originalCopy(source, destination, mode);
+  }) as typeof fs.copyFileSync;
+};
+
 const loadRemotionModules = () => {
   if (!remotionModulesPromise) {
     remotionModulesPromise = (async () => {
+      patchBundlerFaviconCopy();
       const [{ bundle }, renderer] = await Promise.all([
         import("@remotion/bundler"),
         import("@remotion/renderer"),
