@@ -4,6 +4,8 @@
 
 Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/export` route. The function now bundles the Remotion compositor binaries that ship with `@remotion/renderer`, so Vercel’s Node.js runtime can execute the renders directly.
 
+> **Note:** The linux compositor (`@remotion/compositor-linux-x64-gnu`) is vendored under `vendor/remotion/` and referenced from `package.json`. This guarantees that builds performed on Windows (or any non-linux machine) still include the linux binary Vercel needs.
+
 ## Deployment Requirements
 
 1. **Linux-native compositor packages**  
