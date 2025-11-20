@@ -1,0 +1,3 @@
+# Exclude vendor directory - compositor should come from npm
+
+vendor/
