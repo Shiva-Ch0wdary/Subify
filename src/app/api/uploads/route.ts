@@ -6,11 +6,21 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      return NextResponse.json(
+        {
+          error:
+            "Blob uploads are disabled in this environment. Set BLOB_READ_WRITE_TOKEN to enable server uploads.",
+        },
+        { status: 501 },
+      );
+    }
     const body = await request.json();
     const result = await handleUpload({
       request,
       body,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: [
           "video/mp4",

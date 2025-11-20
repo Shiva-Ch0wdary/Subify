@@ -16,6 +16,9 @@ export type UploadedBlobInfo = {
 };
 
 export const uploadFileToBlob = async (file: File): Promise<UploadedBlobInfo> => {
+  if (process.env.NEXT_PUBLIC_ENABLE_BLOB_UPLOADS !== "true") {
+    throw new Error("Blob uploads are disabled in this environment.");
+  }
   const safeName = sanitizeFilename(file.name || "video.mp4") || `clip-${Date.now()}.mp4`;
   const pathname = `uploads/${Date.now()}-${safeName}`;
   const result = await upload(pathname, file, {

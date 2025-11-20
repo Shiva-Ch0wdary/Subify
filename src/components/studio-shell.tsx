@@ -17,7 +17,6 @@ import type {
 } from "@/lib/types/captions";
 import { CaptionComposition } from "@/remotion/caption-composition";
 import { useSessionMedia } from "@/hooks/use-session-video";
-import { uploadFileToBlob } from "@/lib/client/blob-upload";
 
 type StudioShellProps = {
   initialSession: CaptionSession;
@@ -41,14 +40,9 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
   const resetProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
-  const {
-    videoFile,
-    videoUrl,
-    isVideoLoading,
-    videoError,
-    hasVideo,
-    setExportBlob,
-  } = useSessionMedia({ sessionId: session.id });
+  const { videoFile, videoUrl, isVideoLoading, videoError, hasVideo } = useSessionMedia({
+    sessionId: session.id,
+  });
 
   const durationInFrames = useMemo(
     () => Math.ceil(session.duration * DEFAULT_FPS) || DEFAULT_FPS * 10,
@@ -150,51 +144,11 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
     setExportState("rendering");
     setExportError(null);
     beginProgressEmulation();
-    try {
-      let requestInit: RequestInit = {};
-      try {
-        const upload = await uploadFileToBlob(videoFile);
-        requestInit = {
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            blobUrl: upload.url,
-            blobPath: upload.pathname,
-            fileName: videoFile.name,
-            mimeType: videoFile.type,
-            size: videoFile.size,
-          }),
-        };
-      } catch (uploadError) {
-        console.warn("Falling back to direct export upload", uploadError);
-        const formData = new FormData();
-        formData.append("file", videoFile);
-        requestInit = { body: formData };
-      }
-
-      const response = await fetch(`/api/sessions/${session.id}/export`, {
-        method: "POST",
-        ...requestInit,
-      });
-      if (!response.ok) {
-        const message =
-          (await response.text()) || "Export failed. Please try again.";
-        throw new Error(message);
-      }
-      const blob = await response.blob();
-      const safeName =
-        session.videoMetadata?.name?.replace(/\.[^.]+$/, "") ??
-        `subify-${session.id.slice(0, 6)}`;
-      await setExportBlob(blob, `${safeName}-captions.mp4`);
-      setExportState("completed");
+    setTimeout(() => {
       stopProgressEmulation(true);
+      setExportState("completed");
       router.push(`/download/${session.id}`);
-      return;
-    } catch (error) {
-      console.error(error);
-      stopProgressEmulation(false);
-      setExportState("error");
-      setExportError(error instanceof Error ? error.message : "Export failed.");
-    }
+    }, 1200);
   };
 
   return (

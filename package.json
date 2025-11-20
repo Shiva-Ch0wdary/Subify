@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "render:sample": "remotion render remotion/Root.tsx CaptionComposition out/sample-output.mp4 --props=./assets/sample-captions.json",
-    "render": "remotion render"
+    "render": "remotion render",
+    "render:video": "tsx scripts/render-video.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.376",
@@ -39,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

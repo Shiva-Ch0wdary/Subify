@@ -1,17 +1,4 @@
-import { Buffer } from "buffer";
-import { createReadStream } from "fs";
-import { promises as fs } from "fs";
-import os from "os";
-import path from "path";
-import { NextRequest, NextResponse } from "next/server";
-import { DEFAULT_FPS, DEFAULT_VIDEO_DIMENSIONS } from "@/lib/constants/captions";
-import { readSession } from "@/lib/server/session-store";
-import type { CaptionCompositionProps } from "@/lib/types/captions";
-import { renderCaptionVideo } from "@/lib/server/remotion-renderer";
-import { sanitizeSegments } from "@/lib/utils/captions";
-import { validateUploadFile } from "@/lib/server/transcription";
-import { createTempAssetServer } from "@/lib/server/temp-asset-server";
-import { del } from "@vercel/blob";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -19,161 +6,17 @@ type RouteContext = {
   params: Promise<{ sessionId: string }>;
 };
 
-const streamFile = (filePath: string, cleanup?: () => Promise<void> | void) => {
-  let stream: ReturnType<typeof createReadStream> | null = null;
-  const runCleanup = () => {
-    if (!cleanup) return;
-    return Promise.resolve()
-      .then(() => cleanup())
-      .catch((error) => {
-        console.error("[sessions:export] cleanup failed", error);
-      });
-  };
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      stream = createReadStream(filePath);
-      stream.on("data", (chunk) => {
-        const payload = chunk instanceof Buffer ? chunk : Buffer.from(chunk);
-        controller.enqueue(new Uint8Array(payload));
-      });
-      stream.on("end", () => {
-        controller.close();
-        stream?.close();
-        void runCleanup();
-      });
-      stream.on("error", (error) => {
-        controller.error(error);
-        void runCleanup();
-      });
+export async function POST(_request: Request, context: RouteContext) {
+  const { sessionId } = await context.params;
+  return NextResponse.json(
+    {
+      error:
+        "Server-side rendering is disabled on Vercel. Please render locally using the Remotion CLI helper.",
+      instructions: [
+        "Download the caption JSON/SRT/VTT bundle from the Download page.",
+        `Run: npm run render:video -- --session ./downloads/${sessionId}.json --input ./path/to/video.mp4 --out ./output-with-captions.mp4`,
+      ],
     },
-    cancel() {
-      stream?.destroy();
-      return runCleanup();
-    },
-  });
-};
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const deleteWithRetries = async (targetPath: string, attempts = 5) => {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      await fs.rm(targetPath, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (attempt === attempts - 1) {
-        throw error;
-      }
-      await delay(100 * (attempt + 1));
-    }
-  }
-};
-
-const resolveExportUpload = async (request: NextRequest) => {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    const body = await request.json();
-    if (!body?.blobUrl) {
-      throw new Error("Missing uploaded video reference.");
-    }
-    const response = await fetch(body.blobUrl);
-    if (!response.ok) {
-      throw new Error("Failed to download uploaded video.");
-    }
-    const buffer = await response.arrayBuffer();
-    const file = new File([buffer], body.fileName ?? "upload.mp4", {
-      type: body.mimeType ?? "video/mp4",
-      lastModified: body.lastModified ?? Date.now(),
-    });
-    return { file, blobUrl: body.blobUrl as string };
-  }
-  const formData = await request.formData();
-  const file = formData.get("file");
-  if (!file || !(file instanceof File)) {
-    throw new Error("Expected `file` in form data.");
-  }
-  return { file, blobUrl: null };
-};
-
-export async function POST(request: NextRequest, context: RouteContext) {
-  try {
-    const { sessionId } = await context.params;
-    const session = await readSession(sessionId);
-    if (!session) {
-      return NextResponse.json({ error: "Session not found." }, { status: 404 });
-    }
-    const { file, blobUrl } = await resolveExportUpload(request);
-
-    validateUploadFile(file);
-
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "subify-export-"));
-    let tmpDirActive = true;
-    const removeTmpDir = async () => {
-      if (!tmpDirActive) return;
-      tmpDirActive = false;
-      await deleteWithRetries(tmpDir);
-    };
-    const sourcePath = path.join(tmpDir, "source");
-    const outputFile = path.join(tmpDir, `${sessionId}-export.mp4`);
-
-    try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(sourcePath, buffer);
-      const assetServer = await createTempAssetServer(
-        sourcePath,
-        file.type || "video/mp4",
-      );
-
-      const props: CaptionCompositionProps = {
-        captions: sanitizeSegments(session.captions, {
-          targetDuration: session.duration,
-        }),
-        videoSrc: assetServer.url,
-        stylePreset: session.stylePreset,
-        placement: session.placement,
-        fps: DEFAULT_FPS,
-        duration: session.duration,
-        width: DEFAULT_VIDEO_DIMENSIONS.width,
-        height: DEFAULT_VIDEO_DIMENSIONS.height,
-      };
-
-      try {
-        await renderCaptionVideo(props, outputFile);
-      } finally {
-        await assetServer.close();
-      }
-
-      const headers = new Headers({
-        "Content-Type": "video/mp4",
-        "Content-Disposition": `attachment; filename="${path.basename(outputFile)}"`,
-        "Cache-Control": "no-store",
-      });
-
-      const body = streamFile(outputFile, removeTmpDir);
-
-      return new NextResponse(body, {
-        headers,
-      });
-    } catch (error) {
-      await removeTmpDir();
-      throw error;
-    } finally {
-      if (blobUrl) {
-        await del(blobUrl).catch((err) =>
-          console.warn("[sessions:export] blob cleanup failed", err),
-        );
-      }
-    }
-  } catch (error) {
-    console.error("[sessions:export]", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to render captioned video.",
-      },
-      { status: 500 },
-    );
-  }
+    { status: 501 },
+  );
 }

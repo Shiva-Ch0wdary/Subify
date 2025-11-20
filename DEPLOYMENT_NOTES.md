@@ -1,54 +1,39 @@
-# Video Rendering on Vercel - Operations Notes
+# Video Rendering on Vercel – Local Render Flow
 
 ## Current Status
 
-Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/export` route. The function now bundles the Remotion compositor binaries that ship with `@remotion/renderer`, so Vercel's Node.js runtime can execute the renders directly.
+Vercel’s serverless functions cannot execute the native FFmpeg/compositor stack that Remotion requires, so the `/api/sessions/[sessionId]/export` endpoint intentionally returns a `501` with guidance. The in-app “Export Video” CTA now routes users to the Download hub where they can pull captions in JSON/SRT/VTT form or download a ready-to-use **render kit**.
 
-> **Note:** The Linux compositor (`@remotion/compositor-linux-x64-gnu`) is specified in `optionalDependencies` so it installs on Linux (Vercel) but won't fail on Windows/Mac development machines. The compositor is platform-specific and must be installed on the deployment platform.
+## Render Workflow
 
-## Deployment Requirements
+1. **Upload & edit on Vercel** – Users upload a (small) demo video, generate captions, tweak styles/placement, and preview inside the browser using `@remotion/player`.  
+2. **Download caption artifacts** – The Download page exposes:
+   - `captions.json` (segments only)  
+   - `session.json` (captions + styling metadata)  
+   - `.srt` / `.vtt` subtitle files  
+   - A `render-kit.zip` that bundles everything with a README.
+3. **Local rendering (developers/evaluators)** – Run the new CLI helper:
 
-1. **Linux-native compositor packages**
+   ```bash
+   npm install
+   npm run render:video -- --session ./downloads/<sessionId>-session.json --input ./path/to/video.mp4 --out ./my-video-captions.mp4
+   ```
 
-   - The `@remotion/compositor-linux-x64-gnu` package is listed in `optionalDependencies` so Vercel installs it during the Linux build, while Windows/Mac development environments skip it without errors.
-   - `next.config.ts` enumerates every Remotion native package in `serverExternalPackages` and `outputFileTracingIncludes` so the binaries are copied into the serverless bundle.
-   - **Critical:** The compositor must be installed from npm on Vercel's Linux environment, not vendored, to ensure proper file paths.
+   This script (`scripts/render-video.ts`) spins up the existing Remotion renderer locally, serves the input video via the temp asset server, and bakes captions into the MP4 without touching Vercel.
 
-2. **Node.js runtime**
+## Repository Notes
 
-   - `export` route uses `runtime = "nodejs"` with 1024 MB / 300 s limits (see `vercel.json`). Increase the memory if exports regularly exceed the current limit.
+- The linux compositor package (`@remotion/compositor-linux-x64-gnu`) is vendored under `vendor/remotion/` and referenced via `file:` in `package.json` so Remotion has the required binary even when the repo is installed on non-Linux machines. Vercel still installs it because the `file:` reference resolves during the build.
+- The CLI uses `tsx` to execute TypeScript directly. Ensure `npm install` runs before `npm run render:video`.
+- `src/app/api/sessions/[sessionId]/export/route.ts` returns a descriptive error that points users to the local workflow. Do **not** re-enable server-side rendering on Vercel unless migrating to an environment with FFmpeg support (Remotion Lambda, Render, Railway, etc.).
+- Blob uploads are optional. Set `BLOB_READ_WRITE_TOKEN` **and** `NEXT_PUBLIC_ENABLE_BLOB_UPLOADS=true` when you want users to upload to Vercel Blob storage. Without those env vars, the UI automatically falls back to direct form uploads and local browser storage (no server token required).
+- The Download page now calls `/api/render-kit/:sessionId`, which copies the Remotion/CLI files from `render-kit-template` plus session-specific assets into a ZIP. Users can unzip, run `npm install`, drop in their video, then `npm run render:video` without cloning the full repo.
 
-3. **Temp storage**
+## How To Produce a Render Now
 
-   - Renders stream to `/tmp`. The handler deletes temp files via `deleteWithRetries` to stay within the Lambda 512 MB writeable storage cap.
-   - `REMOTION_DATA_DIR` and `REMOTION_CACHE_LOCATION` are set to `/tmp` directories to prevent Remotion from attempting to write to read-only `/var/task/node_modules/.remotion`.
+1. Visit `/download/:sessionId` and click **Download render kit**.  
+2. Place the downloaded JSON + caption files in the same folder as the original video (the file uploaded to Subify).  
+3. Run `npm run render:video -- --session ./session.json --input ./video.mp4 --out ./video-captions.mp4`.  
+4. Share the generated MP4 manually (via Drive, S3, etc.).
 
-4. **Fonts and assets**
-   - `remotion/fonts.ts` is executed before bundling to ensure caption fonts exist.
-   - Public assets and bundler favicon are force-traced to avoid ENOENT errors.
-
-## Redeploy Checklist
-
-1. `npm ci && npm run lint && npm run build`
-2. `vercel deploy` (or trigger via Git) so Next.js re-traces dependencies in the Linux build environment.
-3. After deploy, run a test export from `/studio/:sessionId` and watch the Vercel function logs for `[remotion]` output.
-
-## Troubleshooting
-
-| Symptom                                                                       | Likely Cause                                     | Fix                                                                                                                            |
-| ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `ENOENT: .../vendor/remotion/compositor-linux-x64-gnu/remotion`               | Stale package-lock.json with vendor symlink      | Delete `package-lock.json` and `node_modules`, ensure compositor is in `optionalDependencies`, run `npm install` then redeploy |
-| `ENOENT: no such file or directory, mkdir '/var/task/node_modules/.remotion'` | Remotion trying to write to read-only filesystem | Ensure `REMOTION_DATA_DIR=/tmp/remotion-data` is set in environment variables                                                  |
-| `ENOENT @remotion/compositor-*`                                               | Missing native package in bundle                 | Confirm the package exists on Vercel build host and that `serverExternalPackages` lists it                                     |
-| `favicon.ico` ENOENT                                                          | Bundler asset not traced                         | Already mitigated via fallback copy in `remotion-renderer.ts`; re-run deploy                                                   |
-| `Socket hang up` / timeout                                                    | Render exceeded 300 s                            | Raise `maxDuration` or reduce export resolution/FPS                                                                            |
-
-## Alternatives
-
-If renders still hit platform limits, consider:
-
-1. **Remotion Lambda** for horizontal scaling (https://www.remotion.dev/docs/lambda).
-2. **Dedicated container/VM** with FFmpeg (Render, Railway, Fly.io, etc.).
-3. **Client-side rendering** via `@remotion/player` for lightweight workloads.
-
-For now, exports should complete on Vercel as long as the above requirements are met.
+This workflow keeps the editing UX on Vercel while avoiding unreliable serverless rendering.

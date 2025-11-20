@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import JSZip from "jszip";
 import type { CaptionSession } from "@/lib/types/captions";
-import { useSessionMedia } from "@/hooks/use-session-video";
 import { captionsToSrt, captionsToVtt } from "@/lib/utils/subtitles";
 
 type DownloadShellProps = {
@@ -27,13 +25,35 @@ const baseFileName = (session: CaptionSession) =>
   `subify-${session.id.slice(0, 6)}`;
 
 export const DownloadShell = ({ session }: DownloadShellProps) => {
-  const { exportFile, exportFileName, isExportLoading } = useSessionMedia({
-    sessionId: session.id,
-  });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isBundling, setIsBundling] = useState(false);
   const baseName = useMemo(() => baseFileName(session), [session]);
+  const renderCommand = useMemo(
+    () =>
+      `npm install\nnpm run render:video -- --session ./${baseName}-session.json --input ./path/to/video.mp4 --out ./${baseName}-captions.mp4`,
+    [baseName],
+  );
 
+  const captionsJson = useMemo(
+    () => JSON.stringify(session.captions, null, 2),
+    [session.captions]
+  );
+  const sessionJson = useMemo(
+    () =>
+      JSON.stringify(
+        {
+          id: session.id,
+          captions: session.captions,
+          stylePreset: session.stylePreset,
+          placement: session.placement,
+          duration: session.duration,
+          language: session.language,
+        },
+        null,
+        2
+      ),
+    [session]
+  );
   const srtContent = useMemo(
     () => captionsToSrt(session.captions),
     [session.captions]
@@ -43,50 +63,32 @@ export const DownloadShell = ({ session }: DownloadShellProps) => {
     [session.captions]
   );
 
-  const ensureExport = () => {
-    if (!exportFile) {
-      setStatusMessage(
-        "Video not found in this browser. Please return to the studio and re-export."
-      );
-      return false;
-    }
-    setStatusMessage(null);
-    return true;
+  const downloadTextFile = (
+    content: string,
+    fileName: string,
+    mime = "text/plain"
+  ) => {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+    downloadBlob(blob, fileName);
   };
 
-  const handleDownloadVideo = () => {
-    if (!ensureExport() || !exportFile) {
-      return;
-    }
-    downloadBlob(exportFile, exportFileName ?? `${baseName}.mp4`);
-  };
-
-  const handleDownloadSubtitle = (format: "srt" | "vtt") => {
-    const content = format === "srt" ? srtContent : vttContent;
-    const blob = new Blob([content], {
-      type: "text/plain;charset=utf-8",
-    });
-    downloadBlob(blob, `${baseName}.${format}`);
-  };
-
-  const handleDownloadBundle = async () => {
-    if (!ensureExport() || !exportFile) {
-      return;
-    }
+  const handleDownloadRenderKit = async () => {
     setIsBundling(true);
-    setStatusMessage("Packaging video + captions…");
+    setStatusMessage("Building render kit…");
     try {
-      const zip = new JSZip();
-      const mp4Name = exportFileName ?? `${baseName}.mp4`;
-      zip.file(mp4Name, await exportFile.arrayBuffer());
-      zip.file(`${baseName}.srt`, srtContent);
-      zip.file(`${baseName}.vtt`, vttContent);
-      const bundle = await zip.generateAsync({ type: "blob" });
-      downloadBlob(bundle, `${baseName}-bundle.zip`);
-      setStatusMessage("Bundle ready! Saved to your device.");
+      const response = await fetch(`/api/render-kit/${session.id}`);
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to build render kit.");
+      }
+      const blob = await response.blob();
+      downloadBlob(blob, `${baseName}-render-kit.zip`);
+      setStatusMessage(
+        "Render kit downloaded. Unzip it, drop in your video, run npm install, then npm run render:video."
+      );
     } catch (error) {
-      console.error("Failed to create bundle", error);
-      setStatusMessage("Unable to create bundle. Please try again.");
+      console.error("Failed to download render kit", error);
+      setStatusMessage("Unable to download render kit. Please try again.");
     } finally {
       setIsBundling(false);
     }
@@ -99,51 +101,71 @@ export const DownloadShell = ({ session }: DownloadShellProps) => {
           Subify
         </p>
         <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">
-          Your export is ready to download !
+          Download your caption assets
         </h1>
         <p className="mt-4 text-base text-white/80 sm:text-lg">
-          Grab your finished video, clean subtitle files, or a complete bundle
-          for easy sharing.
+          Server-side rendering is disabled on Vercel. Grab your caption files
+          and render locally with the provided CLI.
         </p>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-3">
         <article className="flex flex-col rounded-3xl border border-white/10 bg-black/50 p-6 text-white backdrop-blur">
           <div className="space-y-2">
-            <p className="text-lg font-semibold">Video with subtitles</p>
-            <ul className="text-sm text-white/70 list-disc pl-5 space-y-1">
-              <li>Download your MP4 with subtitles perfectly baked in.</li>{" "}
-              <li>Ideal for instant posting and sharing.</li>
+            <p className="text-lg font-semibold">Caption data (JSON)</p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-white/70">
+              <li>Download captions as structured JSON.</li>
+              <li>Perfect for the local Remotion renderer or other tools.</li>
             </ul>
           </div>
-          <button
-            type="button"
-            onClick={handleDownloadVideo}
-            disabled={isExportLoading || !exportFile}
-            className="mt-auto inline-flex items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_65px_rgba(16,185,129,0.45)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExportLoading ? "Loading…" : "Download MP4"}
-          </button>
+          <div className="mt-auto grid gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                downloadTextFile(
+                  captionsJson,
+                  `${baseName}-captions.json`,
+                  "application/json"
+                )
+              }
+              className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30"
+            >
+              Download captions.json
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                downloadTextFile(
+                  sessionJson,
+                  `${baseName}-session.json`,
+                  "application/json"
+                )
+              }
+              className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30"
+            >
+              Download session.json
+            </button>
+          </div>
         </article>
 
         <article className="flex flex-col rounded-3xl border border-white/10 bg-black/50 p-6 text-white backdrop-blur">
           <div className="space-y-2">
             <p className="text-lg font-semibold">Subtitle files (SRT & VTT)</p>
-            <ul className="text-sm text-white/70 list-disc pl-5 space-y-1">
-              <li>Get clean subtitle files for editors and platforms.</li>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-white/70">
+              <li>Ready for YouTube, Premiere Pro, or any caption editor.</li>
             </ul>
           </div>
-          <div className="mt-auto grid gap-3 ">
+          <div className="mt-auto grid gap-3">
             <button
               type="button"
-              onClick={() => handleDownloadSubtitle("srt")}
-              className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 "
+              onClick={() => downloadTextFile(srtContent, `${baseName}.srt`)}
+              className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30"
             >
               Download .srt
             </button>
             <button
               type="button"
-              onClick={() => handleDownloadSubtitle("vtt")}
+              onClick={() => downloadTextFile(vttContent, `${baseName}.vtt`)}
               className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30"
             >
               Download .vtt
@@ -153,42 +175,72 @@ export const DownloadShell = ({ session }: DownloadShellProps) => {
 
         <article className="flex flex-col rounded-3xl border border-white/10 bg-black/50 p-6 text-white backdrop-blur">
           <div className="space-y-2">
-            <p className="text-lg font-semibold">Everything bundle</p>
-            <ul className="text-sm text-white/70 list-disc pl-5 space-y-1">
-              <li>Get a ZIP containing the MP4 + both subtitle formats.</li>
-              <li>Best for delivering files to clients or teams.</li>
+            <p className="text-lg font-semibold">Local render kit</p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-white/70">
+              <li>ZIP containing session + captions + README instructions.</li>
+              <li>
+                Use with <code className="font-mono">npm run render:video</code>
+                .
+              </li>
             </ul>
           </div>
           <button
             type="button"
-            onClick={handleDownloadBundle}
-            disabled={isBundling || isExportLoading || !exportFile}
+            onClick={handleDownloadRenderKit}
+            disabled={isBundling}
             className="mt-auto inline-flex items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_20px_65px_rgba(99,102,241,0.45)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isBundling ? "Creating bundle…" : "Download bundle"}
+            {isBundling ? "Creating kit…" : "Download render kit"}
           </button>
         </article>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-black/40 p-6 text-white">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-base font-semibold">Need to make adjustments?</p>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-3">
+            <p className="text-base font-semibold">Render locally</p>
             <p className="text-sm text-white/70">
-             Hop back into the studio to tweak styling, reposition captions, or regenerate subtitles anytime.
+              Use the CLI to bake captions into your MP4 without relying on Vercel’s
+              serverless runtime.
+            </p>
+            <div className="relative rounded-2xl border border-white/10 bg-black/60 p-4 text-xs text-white/80">
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(renderCommand)}
+                className="absolute right-3 top-3 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white transition hover:border-white/30"
+              >
+                Copy
+              </button>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words pe-20 text-xs text-white/80">
+{renderCommand}
+              </pre>
+            </div>
+            <p className="text-xs text-white/60">
+              Run this command from your Subify project root (the folder with package.json). The
+              video file should be the same one you uploaded to Subify. Rendering happens 100% on
+              your machine via Remotion + FFmpeg.
             </p>
           </div>
-          <Link
-            href={`/studio/${session.id}`}
-            className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-white/40"
-          >
-            Return to studio
-          </Link>
         </div>
-        {statusMessage && (
+      </section>
+      <section className="rounded-3xl border border-white/10 bg-black/40 p-6 text-white">
+      <div className="space-y-3">
+            <p className="text-base font-semibold">Need to tweak captions?</p>
+            <p className="text-sm text-white/70">
+              Hop back into the studio to adjust styling or regenerate subtitles. Re-download the
+              caption kit afterward.
+            </p>
+            <Link
+              href={`/studio/${session.id}`}
+              className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-white/40"
+            >
+              Return to studio
+            </Link>
+          </div>
+           {statusMessage && (
           <p className="mt-4 text-sm text-amber-200">{statusMessage}</p>
         )}
-      </section>
+        </section>
     </div>
   );
 };
