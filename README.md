@@ -1,86 +1,147 @@
-# Subify - AI Captioning Studio
+# Subify · AI Captioning Studio
 
-Subify lets creators upload short-form video, generate Hinglish captions with OpenAI Whisper, style them in Remotion, and export both the rendered MP4 and clean subtitle files (SRT/VTT). Everything runs on a local-first storage model so raw videos never touch the deployment filesystem.
+An end-to-end captioning workflow for short-form video. Subify lets creators upload an MP4, generate Hinglish subtitles with OpenAI Whisper, customize styles in a Remotion-powered studio, and export an MP4 alongside clean `.srt`/`.vtt` files—all while keeping source media local to the browser.
 
-## Highlights
+---
 
-- **Next.js 16 + App Router** with server actions for uploads, session storage, and Remotion rendering.
-- **OpenAI Whisper (gpt-4o-mini-transcribe)** for super accurate Hinglish transcripts with segment + word timing.
-- **Remotion studio** exposes three caption presets, three placements, and a real-time preview powered by `@remotion/player`.
-- **Download hub** offers MP4, `.srt`, `.vtt`, or a zipped bundle, no re-rendering required.
-- **Local-first privacy**: uploads stay inside the browser’s IndexedDB and are streamed to the server only during transcription/export.
+## Feature Highlights
 
-## Architecture Snapshot
+- **Hinglish-first transcription** using `gpt-4o-mini-transcribe` with segment + word timestamps and automatic duration normalization.
+- **Remotion studio** with real-time preview, three style presets, placement controls, and export parity between preview and server renders.
+- **Download hub** that returns the rendered MP4, individual subtitle files, or a bundled ZIP with no extra render time.
+- **Local-first privacy**: raw uploads and exports live in browser IndexedDB (`video-store`) and are streamed to the server only during transcription/export.
+- **Robust upload pipeline** with temp storage in `/tmp`, resumable session metadata under `storage/`, and fallbacks when the temp endpoint is unavailable.
 
-| Concern | Implementation |
+---
+
+## Architecture at a Glance
+
+| Layer | Details |
 | --- | --- |
-| UI / Routing | Next.js App Router, React Server Components, Tailwind CSS v4 |
-| Rendering | Remotion (`@remotion/player`, `@remotion/renderer`) |
-| Speech-to-Text | OpenAI Whisper via `openai` SDK |
-| Persistence | JSON session store under `storage/` + browser IndexedDB for raw media |
-| Deployment Target | Dockerized Node.js 20 (Railway or any container host) |
+| UI & Routing | Next.js 16 App Router, React Server Components, Suspense-ready client shells |
+| Styling | Tailwind CSS v4 with utility-first gradients + glassmorphism components |
+| Transcription | OpenAI Whisper via the `openai` SDK (`transcribeToCaptions` in `src/lib/server/transcription.ts`) |
+| Rendering | Remotion (`@remotion/player`, `@remotion/renderer`) compositions defined in `remotion/` |
+| Persistence | Browser IndexedDB for media blobs + JSON session store under `storage/sessions` |
+| Downloads | Subtitle helpers (`captionsToSrt`, `captionsToVtt`) and ZIP packaging via `JSZip` |
+| Deployment | Dockerized Node.js 20 image with FFmpeg, designed for Railway or any container host |
 
-## Prerequisites
+See `src/app/docs` for an in-app walkthrough of the same flow.
 
-- Node.js 20+
-- npm 10+
-- OpenAI account + Whisper API key (`OPENAI_API_KEY`)
+---
 
-## Setup
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+ and npm 10+
+- OpenAI account with Whisper transcription access (`OPENAI_API_KEY`)
+- macOS/Linux/WSL when rendering locally (FFmpeg + headless Chrome requirements)
+
+### Local Development
 
 ```bash
-git clone <repo>
+git clone <repo-url>
 cd Subify
 npm install
-cp .env.local   # provide OPENAI_API_KEY
+cp .env.local   # add OPENAI_API_KEY
 npm run dev
 ```
 
-Visit `http://localhost:3000` and drop an `.mp4` (≤300 MB) to get started.
+Visit `http://localhost:3000`, drop an MP4 (≤300 MB), and follow the upload → studio → download flow.
 
-## Workflow
+### Production Build
 
-1. **Upload** - the landing page validates the file, stores it in IndexedDB, streams the file to `/api/uploads` (which writes to `/tmp` inside the container), and POSTs the upload id to `/api/sessions` for Whisper transcription. If the temp upload endpoint is unavailable the app falls back to direct multipart form posts.
-2. **Studio** - `/studio/[sessionId]` loads captions, lets you switch styles/placements, and previews everything in Remotion.
-3. **Export** - clicking *Export MP4* triggers the same temp upload flow and sends the upload id to `/api/sessions/[id]/export`. Remotion renders the composition on the server and streams the MP4 back; the resulting blob is cached locally.
-4. **Download hub** - after export the app redirects to `/download/[sessionId]` where you can grab:
-   - MP4 with burned-in captions
-   - `.srt` and `.vtt` sidecar files (generated client-side)
-   - A `.zip` bundle containing MP4 + both subtitle formats
+```bash
+npm run build    # bundles Remotion via scripts/bundle-remotion.mjs
+npm start        # serves the Next.js production build
+```
 
-You can always hop back into the studio to change styles and export again.
+`npm run build` validates that `.remotion-bundle/` exists so the server can render without a dev server. The startup script re-checks this before running `npm start`.
 
-## Subtitle generation
+---
 
-Sanitized `CaptionSegment`s feed two helpers (`captionsToSrt`, `captionsToVtt`) in `src/lib/utils/subtitles.ts`. They normalize timestamps, handle multiline content, and ensure WebVTT + SRT specs are met. The helpers power both individual downloads and the bundle workflow.
+## Environment Variables
 
-## Scripts
+| Variable | Required | Description |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | ✅ | Used by the Whisper transcription client. Without it, uploads fail fast. |
+| `OPENAI_TRANSCRIBE_MODEL` | Optional | Override the default `gpt-4o-mini-transcribe` model string. |
+| `SUBIFY_STORAGE_ROOT` | Optional | Custom path for session JSON. Defaults to `./storage` locally and `/tmp/subify-storage` on Vercel/Railway. |
+| `SUBIFY_UPLOAD_TTL_MS` | Optional | Milliseconds before temp uploads in `/tmp/subify-upload-cache` expire. Defaults to 30 minutes. |
+| `PORT` | Optional | Honored by the `npm start` script and Docker entrypoint (Railway sets this automatically). |
 
-| Command | Description |
+Copy `.env.local.example` to `.env.local` and keep secrets outside version control.
+
+---
+
+## Available Scripts
+
+| Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start Next.js locally with hot reload.
-| `npm run build` / `npm start` | Production build + serve.
-| `npm run lint` | ESLint across the entire project.
-| `npm run render:sample` | CLI Remotion render using `assets/sample-captions.json` → `out/sample-output.mp4`.
+| `npm run dev` | Start Next.js with hot reload. |
+| `npm run lint` | Run ESLint (configured via `eslint.config.mjs`). |
+| `npm run bundle:remotion` | Manually pre-bundle Remotion to `.remotion-bundle/`. Included inside `npm run build`. |
+| `npm run build` | Run the Remotion bundle step and compile the Next.js production output. |
+| `npm run start` | Serve the production build on `${PORT:-3000}`. |
+| `npm run render:sample` | CLI render of `CaptionComposition` using `assets/sample-captions.json` → `out/sample-output.mp4`. |
+| `npm run render` | Raw `remotion render` passthrough for custom jobs. |
 
-## Deployment notes
+The `scripts/startup.sh` guard ensures Remotion assets exist before serving traffic.
 
-- **Environment** - set `OPENAI_API_KEY` (required) and optionally `SUBIFY_STORAGE_ROOT` if you want session JSON to live somewhere other than `/app/storage`. Railway variables work out of the box.
-- **Storage** - the repo ships with empty `storage/sessions/.gitkeep` and `storage/renders/.gitkeep`. At runtime these directories persist caption metadata only; raw uploads never land here.
-- **Uploads** - `/api/uploads` now streams files directly to the container’s `/tmp` directory and returns a short-lived `uploadId`. API routes consume the id, move the file into their own temp workspace, and delete both source + render artifacts when finished. Nothing ever touches `/public`.
-- **Static assets** - sample media lives in `assets/` + `public/samples/` strictly for demos/testing.
-- **Cleaning** - no generated exports or session JSONs are committed, keeping the repo production-ready.
+---
 
-Once deployed, the workflow remains identical: uploads stay local to the browser, Whisper runs inside your serverless region, and rendered MP4/subtitle downloads are delivered through the download hub.
+## Data Flow
 
-## Running in Docker / Railway
+1. **Upload (`/` + `HomeShell`)**  
+   Client-side validation enforces MP4 + 300 MB limits. Files are saved to IndexedDB, streamed to `/api/uploads`, and posted to `/api/sessions` alongside style/placement metadata. If the temp endpoint fails, the UI falls back to direct multipart form uploads.
 
-1. Build locally: `docker build -t subify .`
-2. Run the container: `docker run -p 3000:3000 --env OPENAI_API_KEY=sk-... subify`
-3. On Railway, connect the repo, let it detect the `Dockerfile`, and set `OPENAI_API_KEY` (plus optional vars like `SUBIFY_STORAGE_ROOT`). The app binds to `${PORT:-3000}` automatically.
+2. **Transcription (`/api/sessions`, `/api/generate-captions`)**  
+   Server routes validate type/size, call `transcribeToCaptions`, and persist a `CaptionSession` JSON record with normalized segments, duration, language, and video metadata.
 
-FFmpeg comes pre-installed in the image, uploads/render artifacts live exclusively under `/tmp`, and the production container only executes `npm run start` at runtime.
+3. **Studio (`/studio/[sessionId]`)**  
+   `StudioShell` hydrates the saved session, exposes Remotion-powered previews, allows restyling, and triggers exports. Rendered MP4 blobs are cached locally via `saveSessionExport` so re-downloads never hit the server.
 
+4. **Download (`/download/[sessionId]`)**  
+   Users can download the MP4 (with baked captions), `.srt`, `.vtt`, or a ZIP bundle built with `JSZip`. Subtitle files rely on `captionsToSrt`/`captionsToVtt` to keep timing accurate.
+
+---
+
+## Storage & Privacy
+
+- **Browser IndexedDB**: `video-store` (original uploads) and `exports` (rendered MP4) ensure raw footage never touches persistent server storage.
+- **Server session store**: JSON metadata lives under `storage/sessions/` (configurable via `SUBIFY_STORAGE_ROOT`). Git keeps this directory empty by default.
+- **Temp uploads**: `/tmp/subify-upload-cache` (or OS temp dir) holds short-lived binaries referenced by `uploadId`.
+- **Rendering artifacts**: Remotion writes intermediate files inside `/tmp` and deletes them after the export completes.
+
+---
+
+## Docker & Railway Deployment
+
+1. **Build the container**
+
+   ```bash
+   docker build -t subify .
+   ```
+
+   The image installs FFmpeg plus the headless Chrome dependencies Remotion needs. `npm ci` + `npm run build` run during the image build, so deployments boot instantly.
+
+2. **Run locally**
+
+   ```bash
+   docker run --rm -p 3000:3000 \
+     -e OPENAI_API_KEY=sk-... \
+     subify
+   ```
+
+3. **Railway**
+   - Connect the repo and let Railway auto-detect the `Dockerfile`.
+   - Set `OPENAI_API_KEY` (and optional overrides such as `SUBIFY_STORAGE_ROOT` or `SUBIFY_UPLOAD_TTL_MS`).
+   - No start command configuration is required—the container executes `scripts/startup.sh`, which finally launches `npm run start` on `$PORT`.
+
+Because everything rides on Docker, the same image can be deployed to Fly.io, Render, AWS ECS, etc., with zero changes.
+
+---
 
 ## Contribution
 
