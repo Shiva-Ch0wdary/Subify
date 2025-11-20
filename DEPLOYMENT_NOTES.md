@@ -2,16 +2,17 @@
 
 ## Current Status
 
-Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/export` route. The function now bundles the Remotion compositor binaries that ship with `@remotion/renderer`, so Vercel’s Node.js runtime can execute the renders directly.
+Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/export` route. The function now bundles the Remotion compositor binaries that ship with `@remotion/renderer`, so Vercel's Node.js runtime can execute the renders directly.
 
-> **Note:** The linux compositor (`@remotion/compositor-linux-x64-gnu`) is vendored under `vendor/remotion/` and referenced from `package.json`. This guarantees that builds performed on Windows (or any non-linux machine) still include the linux binary Vercel needs.
+> **Note:** The Linux compositor (`@remotion/compositor-linux-x64-gnu`) is specified in `optionalDependencies` so it installs on Linux (Vercel) but won't fail on Windows/Mac development machines. The compositor is platform-specific and must be installed on the deployment platform.
 
 ## Deployment Requirements
 
 1. **Linux-native compositor packages**
 
-   - Vercel installs the `@remotion/compositor-*-linux-*` packages during `npm install`.
+   - The `@remotion/compositor-linux-x64-gnu` package is listed in `optionalDependencies` so Vercel installs it during the Linux build, while Windows/Mac development environments skip it without errors.
    - `next.config.ts` enumerates every Remotion native package in `serverExternalPackages` and `outputFileTracingIncludes` so the binaries are copied into the serverless bundle.
+   - **Critical:** The compositor must be installed from npm on Vercel's Linux environment, not vendored, to ensure proper file paths.
 
 2. **Node.js runtime**
 
@@ -34,12 +35,13 @@ Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/ex
 
 ## Troubleshooting
 
-| Symptom                                                                       | Likely Cause                                     | Fix                                                                                        |
-| ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `ENOENT: no such file or directory, mkdir '/var/task/node_modules/.remotion'` | Remotion trying to write to read-only filesystem | Ensure `REMOTION_DATA_DIR=/tmp/remotion-data` is set in environment variables              |
-| `ENOENT @remotion/compositor-*`                                               | Missing native package in bundle                 | Confirm the package exists on Vercel build host and that `serverExternalPackages` lists it |
-| `favicon.ico` ENOENT                                                          | Bundler asset not traced                         | Already mitigated via fallback copy in `remotion-renderer.ts`; re-run deploy               |
-| `Socket hang up` / timeout                                                    | Render exceeded 300 s                            | Raise `maxDuration` or reduce export resolution/FPS                                        |
+| Symptom                                                                       | Likely Cause                                     | Fix                                                                                                                            |
+| ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `ENOENT: .../vendor/remotion/compositor-linux-x64-gnu/remotion`               | Stale package-lock.json with vendor symlink      | Delete `package-lock.json` and `node_modules`, ensure compositor is in `optionalDependencies`, run `npm install` then redeploy |
+| `ENOENT: no such file or directory, mkdir '/var/task/node_modules/.remotion'` | Remotion trying to write to read-only filesystem | Ensure `REMOTION_DATA_DIR=/tmp/remotion-data` is set in environment variables                                                  |
+| `ENOENT @remotion/compositor-*`                                               | Missing native package in bundle                 | Confirm the package exists on Vercel build host and that `serverExternalPackages` lists it                                     |
+| `favicon.ico` ENOENT                                                          | Bundler asset not traced                         | Already mitigated via fallback copy in `remotion-renderer.ts`; re-run deploy                                                   |
+| `Socket hang up` / timeout                                                    | Render exceeded 300 s                            | Raise `maxDuration` or reduce export resolution/FPS                                                                            |
 
 ## Alternatives
 
