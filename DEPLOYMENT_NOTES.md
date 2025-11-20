@@ -1,93 +1,45 @@
-# Video Rendering on Vercel - Important Information
+# Video Rendering on Vercel - Operations Notes
 
 ## Current Status
 
-**Server-side video rendering is DISABLED on Vercel** because Vercel's serverless functions cannot execute the native binaries required by `@remotion/renderer`.
+Server-side rendering is **enabled** again for the `/api/sessions/[sessionId]/export` route. The function now bundles the Remotion compositor binaries that ship with `@remotion/renderer`, so Vercel’s Node.js runtime can execute the renders directly.
 
-## Why It Doesn't Work
+## Deployment Requirements
 
-Remotion's server-side rendering requires:
+1. **Linux-native compositor packages**  
+   - Vercel installs the `@remotion/compositor-*-linux-*` packages during `npm install`.  
+   - `next.config.ts` enumerates every Remotion native package in `serverExternalPackages` and `outputFileTracingIncludes` so the binaries are copied into the serverless bundle.
 
-1. **FFmpeg binary** - Not available in Vercel's Lambda environment
-2. **Native compositor binaries** - Platform-specific binaries that can't run in serverless
-3. **High memory/CPU** - Video rendering is resource-intensive
-4. **Long execution times** - Rendering can take minutes, exceeding serverless limits
+2. **Node.js runtime**  
+   - `export` route uses `runtime = "nodejs"` with 1024 MB / 300 s limits (see `vercel.json`). Increase the memory if exports regularly exceed the current limit.
 
-## Solutions for Production
+3. **Temp storage**  
+   - Renders stream to `/tmp`. The handler deletes temp files via `deleteWithRetries` to stay within the Lambda 512 MB writeable storage cap.
 
-### Option 1: Use @remotion/lambda (Recommended)
+4. **Fonts and assets**  
+   - `remotion/fonts.ts` is executed before bundling to ensure caption fonts exist.  
+   - Public assets and bundler favicon are force-traced to avoid ENOENT errors.
 
-Deploy rendering to AWS Lambda using Remotion's official Lambda package:
+## Redeploy Checklist
 
-```bash
-npm install @remotion/lambda
-```
+1. `npm ci && npm run lint && npm run build`
+2. `vercel deploy` (or trigger via Git) so Next.js re-traces dependencies in the Linux build environment.
+3. After deploy, run a test export from `/studio/:sessionId` and watch the Vercel function logs for `[remotion]` output.
 
-This requires:
+## Troubleshooting
 
-- AWS account
-- Lambda setup
-- S3 bucket for assets
-- Refactor rendering code to use Lambda API
+| Symptom | Likely Cause | Fix |
+| --- | --- | --- |
+| `ENOENT @remotion/compositor-*` | Missing native package in bundle | Confirm the package exists on Vercel build host and that `serverExternalPackages` lists it |
+| `favicon.ico` ENOENT | Bundler asset not traced | Already mitigated via fallback copy in `remotion-renderer.ts`; re-run deploy |
+| `Socket hang up` / timeout | Render exceeded 300 s | Raise `maxDuration` or reduce export resolution/FPS |
 
-**Docs**: https://www.remotion.dev/docs/lambda
+## Alternatives
 
-### Option 2: Client-Side Rendering
+If renders still hit platform limits, consider:
 
-Use `@remotion/player` to render videos in the browser:
+1. **Remotion Lambda** for horizontal scaling (https://www.remotion.dev/docs/lambda).  
+2. **Dedicated container/VM** with FFmpeg (Render, Railway, Fly.io, etc.).  
+3. **Client-side rendering** via `@remotion/player` for lightweight workloads.
 
-```bash
-npm install @remotion/player
-```
-
-Pros:
-
-- Works on Vercel without changes
-- No server costs for rendering
-
-Cons:
-
-- Slower rendering (browser-based)
-- Client must stay on page during render
-- Uses client's resources
-
-### Option 3: Separate Rendering Service
-
-Deploy a dedicated rendering server:
-
-- Use Docker container with FFmpeg
-- Deploy to Railway, Render, or AWS EC2
-- Call rendering API from Vercel frontend
-
-### Option 4: Different Hosting
-
-Move entire application to:
-
-- Railway.app
-- Render.com
-- AWS EC2/ECS
-- Digital Ocean Droplets
-
-These platforms support long-running processes and native binaries.
-
-## Current Workaround
-
-The export endpoint now returns a 501 (Not Implemented) error on Vercel with a helpful message. It still works locally for development.
-
-## Recommended Next Steps
-
-1. **Immediate**: Use client-side rendering with `@remotion/player`
-2. **Production**: Implement `@remotion/lambda` for scalable cloud rendering
-3. **Alternative**: Set up a dedicated rendering service
-
-## Development vs Production
-
-- **Local Development**: Server-side rendering works (FFmpeg available)
-- **Vercel Deployment**: Server-side rendering disabled (returns 501 error)
-
-You can test rendering locally with:
-
-```bash
-npm run dev
-# Then use the export endpoint locally
-```
+For now, exports should complete on Vercel as long as the above requirements are met.
