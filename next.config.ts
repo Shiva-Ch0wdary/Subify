@@ -12,8 +12,6 @@ const require = createRequire(import.meta.url);
 const ROOT_DIR = process.cwd();
 const REMOTION_DIR = path.join(ROOT_DIR, "remotion");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const VENDOR_DIR = path.join(ROOT_DIR, "vendor");
-const VENDOR_COMPOSITOR_DIR = path.join(VENDOR_DIR, "remotion", "compositor-linux-x64-gnu");
 const resolvePackageDir = (pkg: string) => {
   try {
     return path.dirname(require.resolve(`${pkg}/package.json`));
@@ -51,9 +49,6 @@ const nextConfig: NextConfig = {
     "/api/sessions/[sessionId]/export": [
       REMOTION_DIR,
       PUBLIC_DIR,
-      // Include the entire vendor directory with the compositor binaries
-      VENDOR_DIR,
-      VENDOR_COMPOSITOR_DIR,
       ...REMOTION_NATIVE_PACKAGE_DIRS,
       // Remotion bundles import fonts dynamically, so manually trace the package directory.
       REMOTION_FONTS_DIR,

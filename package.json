@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@remotion/bundler": "4.0.376",
-    "@remotion/compositor-linux-x64-gnu": "file:vendor/remotion/compositor-linux-x64-gnu",
+    "@remotion/compositor-linux-x64-gnu": "4.0.376",
     "@remotion/google-fonts": "4.0.376",
     "@remotion/player": "4.0.376",
     "@remotion/renderer": "4.0.376",
