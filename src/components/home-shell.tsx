@@ -8,7 +8,7 @@ import type {
   CaptionStylePreset,
 } from "@/lib/types/captions";
 import { saveSessionVideo } from "@/lib/client/video-store";
-import { uploadFileToBlob } from "@/lib/client/blob-upload";
+import { uploadFileToTempStore } from "@/lib/client/temp-upload";
 
 const MAX_FILE_SIZE_MB = 300;
 const DEFAULT_STYLE_PRESET: CaptionStylePreset = "standard";
@@ -72,15 +72,11 @@ export const HomeShell = () => {
 
       let requestInit: RequestInit = {};
       try {
-        const upload = await uploadFileToBlob(videoFile);
+        const upload = await uploadFileToTempStore(videoFile);
         requestInit = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            blobUrl: upload.url,
-            blobPath: upload.pathname,
-            fileName: videoFile.name,
-            mimeType: videoFile.type,
-            size: videoFile.size,
+            uploadId: upload.uploadId,
             stylePreset: DEFAULT_STYLE_PRESET,
             placement,
             duration: videoDuration,

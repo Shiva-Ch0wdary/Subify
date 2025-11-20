@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { del } from "@vercel/blob";
 import {
   CAPTION_PLACEMENT_OPTIONS,
   CAPTION_STYLE_PRESETS,
@@ -10,6 +9,10 @@ import {
   createSessionRecord,
   saveSession,
 } from "@/lib/server/session-store";
+import {
+  deleteTempUpload,
+  readTempUploadAsFile,
+} from "@/lib/server/temp-upload-store";
 import {
   transcribeToCaptions,
   validateUploadFile,
@@ -27,48 +30,29 @@ const isValidStylePreset = (value: string): value is CaptionStylePreset =>
 const isValidPlacement = (value: string): value is CaptionPlacement =>
   CAPTION_PLACEMENT_OPTIONS.some((option) => option.id === value);
 
-const downloadBlobAsFile = async (payload: {
-  blobUrl: string;
-  fileName?: string;
-  mimeType?: string;
-  lastModified?: number;
-}) => {
-  const response = await fetch(payload.blobUrl);
-  if (!response.ok) {
-    throw new Error("Failed to download uploaded video blob.");
-  }
-  const buffer = await response.arrayBuffer();
-  return new File([buffer], payload.fileName ?? "upload.mp4", {
-    type: payload.mimeType ?? "video/mp4",
-    lastModified: payload.lastModified ?? Date.now(),
-  });
-};
-
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") ?? "";
     const isJson = contentType.includes("application/json");
     let fileSource: File | null = null;
-    let blobUrl: string | null = null;
+    let tempUploadId: string | null = null;
     let stylePresetParam: FormDataEntryValue | null = null;
     let placementParam: FormDataEntryValue | null = null;
     let durationParam: FormDataEntryValue | null = null;
 
     if (isJson) {
       const body = await request.json();
-      if (!body?.blobUrl) {
-        return NextResponse.json({ error: "Missing uploaded video reference." }, { status: 400 });
+      if (!body?.uploadId) {
+        return NextResponse.json(
+          { error: "Missing uploaded video reference." },
+          { status: 400 },
+        );
       }
-      blobUrl = String(body.blobUrl);
+      tempUploadId = String(body.uploadId);
       stylePresetParam = body.stylePreset ?? null;
       placementParam = body.placement ?? null;
       durationParam = body.duration ?? null;
-      fileSource = await downloadBlobAsFile({
-        blobUrl: blobUrl as string,
-        fileName: body.fileName,
-        mimeType: body.mimeType,
-        lastModified: body.lastModified,
-      });
+      fileSource = await readTempUploadAsFile(tempUploadId);
     } else {
       const formData = await request.formData();
       const file = formData.get("file");
@@ -134,9 +118,9 @@ export async function POST(request: NextRequest) {
     });
 
     await saveSession(session);
-    if (blobUrl) {
-      await del(blobUrl).catch((error) =>
-        console.warn("[sessions:create] blob cleanup failed", error),
+    if (tempUploadId) {
+      await deleteTempUpload(tempUploadId).catch((error) =>
+        console.warn("[sessions:create] temp upload cleanup failed", error),
       );
     }
 

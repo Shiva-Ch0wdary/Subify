@@ -17,7 +17,7 @@ import type {
 } from "@/lib/types/captions";
 import { CaptionComposition } from "@/remotion/caption-composition";
 import { useSessionMedia } from "@/hooks/use-session-video";
-import { uploadFileToBlob } from "@/lib/client/blob-upload";
+import { uploadFileToTempStore } from "@/lib/client/temp-upload";
 
 type StudioShellProps = {
   initialSession: CaptionSession;
@@ -153,15 +153,11 @@ export const StudioShell = ({ initialSession }: StudioShellProps) => {
     try {
       let requestInit: RequestInit = {};
       try {
-        const upload = await uploadFileToBlob(videoFile);
+        const upload = await uploadFileToTempStore(videoFile);
         requestInit = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            blobUrl: upload.url,
-            blobPath: upload.pathname,
-            fileName: videoFile.name,
-            mimeType: videoFile.type,
-            size: videoFile.size,
+            uploadId: upload.uploadId,
           }),
         };
       } catch (uploadError) {

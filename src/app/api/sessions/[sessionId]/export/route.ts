@@ -7,11 +7,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_FPS, DEFAULT_VIDEO_DIMENSIONS } from "@/lib/constants/captions";
 import { readSession } from "@/lib/server/session-store";
 import type { CaptionCompositionProps } from "@/lib/types/captions";
-import { renderCaptionVideo } from "@/lib/server/remotion-renderer";
 import { sanitizeSegments } from "@/lib/utils/captions";
 import { validateUploadFile } from "@/lib/server/transcription";
 import { createTempAssetServer } from "@/lib/server/temp-asset-server";
-import { del } from "@vercel/blob";
+import {
+  copyTempUploadTo,
+  deleteTempUpload,
+  describeTempUpload,
+} from "@/lib/server/temp-upload-store";
+import { renderCaptionVideo } from "@/lib/server/remotion-renderer-new";
 
 export const runtime = "nodejs";
 
@@ -69,30 +73,25 @@ const deleteWithRetries = async (targetPath: string, attempts = 5) => {
   }
 };
 
-const resolveExportUpload = async (request: NextRequest) => {
+type UploadResolution =
+  | { kind: "file"; file: File }
+  | { kind: "temp"; uploadId: string };
+
+const resolveExportUpload = async (request: NextRequest): Promise<UploadResolution> => {
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     const body = await request.json();
-    if (!body?.blobUrl) {
+    if (!body?.uploadId) {
       throw new Error("Missing uploaded video reference.");
     }
-    const response = await fetch(body.blobUrl);
-    if (!response.ok) {
-      throw new Error("Failed to download uploaded video.");
-    }
-    const buffer = await response.arrayBuffer();
-    const file = new File([buffer], body.fileName ?? "upload.mp4", {
-      type: body.mimeType ?? "video/mp4",
-      lastModified: body.lastModified ?? Date.now(),
-    });
-    return { file, blobUrl: body.blobUrl as string };
+    return { kind: "temp", uploadId: String(body.uploadId) };
   }
   const formData = await request.formData();
   const file = formData.get("file");
   if (!file || !(file instanceof File)) {
     throw new Error("Expected `file` in form data.");
   }
-  return { file, blobUrl: null };
+  return { kind: "file", file };
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -102,9 +101,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!session) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
-    const { file, blobUrl } = await resolveExportUpload(request);
+    const upload = await resolveExportUpload(request);
 
-    validateUploadFile(file);
+    let tempUploadMetadata: ReturnType<typeof describeTempUpload> | null = null;
+    if (upload.kind === "file") {
+      validateUploadFile(upload.file);
+    } else {
+      tempUploadMetadata = describeTempUpload(upload.uploadId);
+      if (!tempUploadMetadata) {
+        throw new Error("Uploaded video expired. Please upload it again.");
+      }
+      // Validate size/type via metadata (size check occurs during upload)
+      validateUploadFile({
+        size: tempUploadMetadata.size,
+        type: tempUploadMetadata.mimeType,
+      });
+    }
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "subify-export-"));
     let tmpDirActive = true;
@@ -117,11 +129,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const outputFile = path.join(tmpDir, `${sessionId}-export.mp4`);
 
     try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(sourcePath, buffer);
+      if (upload.kind === "file") {
+        const buffer = Buffer.from(await upload.file.arrayBuffer());
+        await fs.writeFile(sourcePath, buffer);
+      } else {
+        await copyTempUploadTo(upload.uploadId, sourcePath);
+      }
       const assetServer = await createTempAssetServer(
         sourcePath,
-        file.type || "video/mp4",
+        upload.kind === "file"
+          ? upload.file.type || "video/mp4"
+          : tempUploadMetadata?.mimeType || "video/mp4",
       );
 
       const props: CaptionCompositionProps = {
@@ -158,9 +176,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       await removeTmpDir();
       throw error;
     } finally {
-      if (blobUrl) {
-        await del(blobUrl).catch((err) =>
-          console.warn("[sessions:export] blob cleanup failed", err),
+      if (upload.kind === "temp") {
+        await deleteTempUpload(upload.uploadId).catch((err) =>
+          console.warn("[sessions:export] temp upload cleanup failed", err),
         );
       }
     }

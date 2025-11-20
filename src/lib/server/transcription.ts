@@ -54,7 +54,9 @@ const resolveResponseFormat = () => {
   return "json" as const;
 };
 
-export const validateUploadFile = (file: File) => {
+type FileLike = Pick<File, "size" | "type">;
+
+export const validateUploadFile = (file: FileLike) => {
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw new Error(
       `File exceeds ${Math.floor(MAX_FILE_SIZE_BYTES / 1024 / 1024)}MB limit.`,
