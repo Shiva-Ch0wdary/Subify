@@ -12,8 +12,16 @@ const require = createRequire(import.meta.url);
 const ROOT_DIR = process.cwd();
 const REMOTION_DIR = path.join(ROOT_DIR, "remotion");
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const REMOTION_FONTS_DIR = path.dirname(require.resolve("@remotion/google-fonts/package.json"));
-const REMOTION_BUNDLER_DIR = path.dirname(require.resolve("@remotion/bundler/package.json"));
+const resolvePackageDir = (pkg: string) => {
+  try {
+    return path.dirname(require.resolve(`${pkg}/package.json`));
+  } catch {
+    // Package may be optional for this platform; fall back to the expected node_modules path.
+    return path.join(ROOT_DIR, "node_modules", pkg);
+  }
+};
+const REMOTION_FONTS_DIR = resolvePackageDir("@remotion/google-fonts");
+const REMOTION_BUNDLER_DIR = resolvePackageDir("@remotion/bundler");
 const REMOTION_BUNDLER_FAVICON = path.join(REMOTION_BUNDLER_DIR, "favicon.ico");
 
 const REMOTION_NATIVE_PACKAGES = [
@@ -33,6 +41,7 @@ const REMOTION_NATIVE_PACKAGES = [
   "@remotion/compositor-win32-x64-msvc",
   "@esbuild/win32-x64",
 ];
+const REMOTION_NATIVE_PACKAGE_DIRS = REMOTION_NATIVE_PACKAGES.map(resolvePackageDir);
 
 const nextConfig: NextConfig = {
   serverExternalPackages: REMOTION_NATIVE_PACKAGES,
@@ -40,6 +49,7 @@ const nextConfig: NextConfig = {
     "/api/sessions/[sessionId]/export": [
       REMOTION_DIR,
       PUBLIC_DIR,
+      ...REMOTION_NATIVE_PACKAGE_DIRS,
       // Remotion bundles import fonts dynamically, so manually trace the package directory.
       REMOTION_FONTS_DIR,
       // Include bundler assets (especially the favicon) to prevent ENOENT errors at runtime.
