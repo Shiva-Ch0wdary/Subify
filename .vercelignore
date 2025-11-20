@@ -1,0 +1,4 @@
+# Ensure vendor directory with compositor binaries is included
+!vendor/
+!vendor/remotion/
+!vendor/remotion/compositor-linux-x64-gnu/
